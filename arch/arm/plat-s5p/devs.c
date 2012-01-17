@@ -649,35 +649,33 @@ struct platform_device s3c_device_usbgadget = {
 };
 #endif
 
-#if defined(CONFIG_VIDEO_TSI)
+#ifdef CONFIG_USB_S3C_OTG_HOST
+/* USB Device (OTG hcd)*/
+static struct resource s3c_usb_otghcd_resource[] = {
+	[0] = {
+		.start = S3C_PA_OTG,
+		.end   = S3C_PA_OTG + S3C_SZ_OTG - 1,
+		.flags = IORESOURCE_MEM,
+	},
+	[1] = {
+		.start = IRQ_OTG,
+		.end   = IRQ_OTG,
+		.flags = IORESOURCE_IRQ,
+	}
+};
 
-/*TSI Interface*/
-static u64 tsi_dma_mask = 0xffffffffUL;
+static u64 s3c_device_usb_otghcd_dmamask = 0xffffffffUL;
 
-static struct resource s3c_tsi_resource[] = {
-        [0] = {
-                .start = S5P_PA_TSI,
-                .end   = S5P_PA_TSI + S5P_SZ_TSI - 1,
-                .flags = IORESOURCE_MEM,
-        },
-        [1] = {
-                .start = IRQ_TSI,
-                .end   = IRQ_TSI,
-                .flags = IORESOURCE_IRQ,
+struct platform_device s3c_device_usb_otghcd = {
+	.name		= "s3c_otghcd",
+	.id		= -1,
+	.num_resources	= ARRAY_SIZE(s3c_usb_otghcd_resource),
+	.resource	= s3c_usb_otghcd_resource,
+        .dev              = {
+                .dma_mask = &s3c_device_usb_otghcd_dmamask,
+                .coherent_dma_mask = 0xffffffffUL
         }
 };
 
-struct platform_device s3c_device_tsi = {
-        .name             = "s3c-tsi",
-        .id               = -1,
-        .num_resources    = ARRAY_SIZE(s3c_tsi_resource),
-        .resource         = s3c_tsi_resource,
-	.dev              = {
-		.dma_mask		= &tsi_dma_mask,
-		.coherent_dma_mask	= 0xffffffffUL
-	}
-
-
-};
-EXPORT_SYMBOL(s3c_device_tsi);
+EXPORT_SYMBOL(s3c_device_usb_otghcd);
 #endif
