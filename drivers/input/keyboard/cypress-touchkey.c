@@ -50,13 +50,14 @@
 
 #define DEVICE_NAME "cypress-touchkey"
 
-#ifdef CONFIG_SAMSUNG_FASCINATE
-extern const unsigned long touch_int_flt_width;
-void touch_key_set_int_flt(unsigned long width);
-int error_cnt = 0;
-u8 prev_data = 0x7;
-unsigned long first_error_time;
-unsigned long last_error_time;
+#ifdef CONFIG_KEYPAD_CYPRESS_TOUCH_BLN
+#include <linux/miscdevice.h>
+#define BACKLIGHTNOTIFICATION_VERSION 8
+
+bool bln_enabled = false; // indicates if BLN function is enabled/allowed (default: false, app enables it on boot)
+bool bln_notification_ongoing= false; // indicates ongoing LED Notification
+bool bln_blink_enabled = false;	// indicates blink is set
+struct cypress_touchkey_devdata *bln_devdata; // keep a reference to the devdata
 #endif
 
 int bl_on = 0;
@@ -418,8 +419,19 @@ static void cypress_touchkey_early_suspend(struct early_suspend *h)
 	disable_irq(devdata->client->irq);
 
 	if (!bl_on)
-		devdata->pdata->touchkey_onoff(TOUCHKEY_OFF);
+#ifdef CONFIG_KEYPAD_CYPRESS_TOUCH_BLN
+	/*
+	 * Disallow powering off the touchkey controller
+	 * while a led notification is ongoing
+	 */
+	{
+	if (!bln_notification_ongoing) 
+#endif
 
+	devdata->pdata->touchkey_onoff(TOUCHKEY_OFF);
+#ifdef CONFIG_KEYPAD_CYPRESS_TOUCH_BLN
+	}
+#endif
 	all_keys_up(devdata);
 	devdata->is_sleeping = true;
 
@@ -544,7 +556,6 @@ static void enable_led_notification(void){
 		pr_info("%s: not in touchmode\n", __FUNCTION__); //remove me
 			/* signal ongoing led notification */
 			bln_notification_ongoing = true;
-			bln_devdata->pdata->touchkey_sleep_onoff(TOUCHKEY_ON);
 			/*
 			 * power on the touchkey controller
 			 * This is actually not needed, but it is intentionally
@@ -568,14 +579,12 @@ static void enable_led_notification(void){
 #else
 			pr_info("%s: cannot set notification led, touchkeys are enabled\n",__FUNCTION__);
 #endif
-	  
 	}
 }
 
 static void disable_led_notification(void){
 	pr_info("%s: notification led disabled\n", __FUNCTION__);
 
-	bln_devdata->pdata->touchkey_sleep_onoff(TOUCHKEY_OFF);
 	/* disable the blink state */
 	bln_blink_enabled = false;
 
@@ -587,7 +596,7 @@ static void disable_led_notification(void){
 	else {
 		disable_touchkey_backlights();
 	}
-#endif 
+#endif
 	/* signal led notification is disabled */
 	bln_notification_ongoing = false;
 	
@@ -833,6 +842,26 @@ static int cypress_touchkey_probe(struct i2c_client *client,
 
     bl_devdata = devdata;
 	setup_timer(&bl_timer, bl_timer_callback, 0);
+#ifdef CONFIG_KEYPAD_CYPRESS_TOUCH_BLN
+	pr_info("%s misc_register(%s)\n", __FUNCTION__, backlightnotification_device.name);
+	err = misc_register(&backlightnotification_device);
+	if (err) {
+		pr_err("%s misc_register(%s) fail\n", __FUNCTION__, backlightnotification_device.name);
+	}else {
+		/*
+		 *  keep a reference to the devdata,
+		 *  misc driver does not give access to it (or i missed that somewhere)
+		 */
+		bln_devdata = devdata;
+
+		/* add the backlightnotification attributes */
+		if (sysfs_create_group(&backlightnotification_device.this_device->kobj, &bln_interface_attributes_group) < 0)
+		{
+			pr_err("%s sysfs_create_group fail\n", __FUNCTION__);
+			pr_err("Failed to create sysfs group for device (%s)!\n", backlightnotification_device.name);
+		}
+	}
+#endif
 
 	return 0;
 
@@ -856,6 +885,11 @@ static int __devexit i2c_touchkey_remove(struct i2c_client *client)
 {
 	struct cypress_touchkey_devdata *devdata = i2c_get_clientdata(client);
 
+       
+#ifdef CONFIG_KEYPAD_CYPRESS_TOUCH_BLN
+       misc_deregister(&backlightnotification_device);
+#endif
+
 	dev_err(&client->dev, "%s: i2c_touchkey_remove\n", __func__);
 
 	misc_deregister(&bl_led_device);
@@ -871,7 +905,7 @@ static int __devexit i2c_touchkey_remove(struct i2c_client *client)
 	free_irq(client->irq, devdata);
 	all_keys_up(devdata);
 	input_unregister_device(devdata->input_dev);
-    del_timer(&bl_timer);
+	del_timer(&bl_timer);
 	kfree(devdata);
 	return 0;
 }

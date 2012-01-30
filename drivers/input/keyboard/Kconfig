@@ -595,4 +595,12 @@ config KEYBOARD_P1
 	  To compile this driver as a module, choose M here: the
 	  module will be called p1_keyboard.
 
+config KEYPAD_CYPRESS_TOUCH_BLN
+	bool "Cypress touch keypad: use backlight notification"
+	depends on KEYPAD_CYPRESS_TOUCH
+	default y
+	help
+	  Say Y here to enable the backlight notification
+	  for android led-notification (modified liblight needed)
+
 endif
