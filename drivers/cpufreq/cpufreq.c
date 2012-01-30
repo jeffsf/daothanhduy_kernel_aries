@@ -1844,12 +1844,6 @@ static void powersave_late_resume(struct early_suspend *handler)
 	}
 }
 
-static struct early_suspend _powersave_early_suspend = {
-	.suspend = powersave_early_suspend,
-	.resume = powersave_late_resume,
-	.level = EARLY_SUSPEND_LEVEL_BLANK_SCREEN,
-};
-
 /*********************************************************************
  *               REGISTER / UNREGISTER CPUFREQ DRIVER                *
  *********************************************************************/
