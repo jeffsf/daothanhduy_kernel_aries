@@ -326,9 +326,12 @@ process:
 	}
 
 	input_sync(devdata->input_dev);
+
+if (!bln_notification_ongoing)
 	bl_set_timeout();
 
 	return IRQ_HANDLED;
+
 err:
 #ifdef CONFIG_SAMSUNG_FASCINATE
 	error_cnt++;
@@ -471,7 +474,8 @@ static void cypress_touchkey_early_resume(struct early_suspend *h)
 
 	up(&enable_sem);
 
-	bl_set_timeout();
+	if (!bln_notification_ongoing)
+		bl_set_timeout();
 }
 #endif
 
@@ -481,6 +485,9 @@ static ssize_t led_status_read(struct device *dev, struct device_attribute *attr
 
 static ssize_t led_status_write(struct device *dev, struct device_attribute *attr, const char *buf, size_t size)
 {
+	if (bln_notification_ongoing)
+		return size;
+	
 	unsigned int data;
 
 	if (sscanf(buf, "%u\n", &data)) {
