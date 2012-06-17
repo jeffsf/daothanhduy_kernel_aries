@@ -32,6 +32,12 @@
 
 #include <trace/events/power.h>
 
+static unsigned int lock_sc_min = 0;
+extern unsigned long get_cpuminfreq(void);
+extern unsigned long get_cpuL0freq(void);
+extern unsigned long get_cpuL1freq(void);
+
+static unsigned int policy_max_orig = 1000000;
 /**
  * The "cpufreq driver" - the arch- or hardware-dependent low
  * level driver of CPUFreq support, and its spinlock. This lock
@@ -1791,6 +1797,57 @@ static int __cpuinit cpufreq_cpu_callback(struct notifier_block *nfb,
 
 static struct notifier_block __refdata cpufreq_cpu_notifier = {
     .notifier_call = cpufreq_cpu_callback,
+};
+
+static void powersave_early_suspend(struct early_suspend *handler)
+{
+	int cpu;
+
+	for_each_online_cpu(cpu) {
+		struct cpufreq_policy *cpu_policy, new_policy;
+
+		cpu_policy = cpufreq_cpu_get(cpu);
+		if (!cpu_policy)
+			return;
+		if (cpufreq_get_policy(&new_policy, cpu))
+			goto out;
+
+		policy_max_orig = new_policy.max;
+		new_policy.max = get_cpuL1freq();
+
+		__cpufreq_set_policy(cpu_policy, &new_policy);
+		cpu_policy->user_policy.max = cpu_policy->max;
+	out:
+		cpufreq_cpu_put(cpu_policy);
+	}
+}
+
+static void powersave_late_resume(struct early_suspend *handler)
+{
+	int cpu;
+
+	for_each_online_cpu(cpu) {
+		struct cpufreq_policy *cpu_policy, new_policy;
+
+		cpu_policy = cpufreq_cpu_get(cpu);
+		if (!cpu_policy)
+			return;
+		if (cpufreq_get_policy(&new_policy, cpu))
+			goto out;
+
+		new_policy.max = policy_max_orig;
+
+		__cpufreq_set_policy(cpu_policy, &new_policy);
+		cpu_policy->user_policy.max = cpu_policy->max;
+	out:
+		cpufreq_cpu_put(cpu_policy);
+	}
+}
+
+static struct early_suspend _powersave_early_suspend = {
+	.suspend = powersave_early_suspend,
+	.resume = powersave_late_resume,
+	.level = EARLY_SUSPEND_LEVEL_BLANK_SCREEN,
 };
 
 /*********************************************************************
