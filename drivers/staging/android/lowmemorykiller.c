@@ -60,6 +60,10 @@ static int white_list[6] = {
 };
 static int white_list_size = 0;
 
+static int white_list[6] = {
+};
+static int white_list_size = 0;
+
 static unsigned long lowmem_deathpending_timeout;
 
 #define lowmem_print(level, x...)			\
