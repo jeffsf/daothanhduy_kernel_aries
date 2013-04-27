@@ -271,6 +271,10 @@ config CPU_FREQ_GOV_SMARTASS2
             'smartassV2' - a "smart" interactoive governor
             If in doubt, say N.
 
+config CPU_FREQ_GOV_WHEATLEY
+	tristate "'wheatley' cpufreq governor"
+	depends on CPU_FREQ
+
 
 config CPU_FREQ_GOV_LULZACTIVE
 	tristate "'lulzactive' cpufreq governor"
