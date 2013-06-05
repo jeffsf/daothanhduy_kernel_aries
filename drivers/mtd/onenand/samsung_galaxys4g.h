@@ -42,12 +42,12 @@ struct mtd_partition s3c_partition_info[] = {
 	{
 		.name		= "system",
 		.offset		= (132*SZ_256K),
-		.size		= (1540*SZ_256K), //1671
+		.size		= (1400*SZ_256K), //1531
 	},
 	{
 		.name		= "userdata",
-		.offset		= (1672*SZ_256K),
-		.size		= (2080*SZ_256K), //3751
+		.offset		= (1532*SZ_256K),
+		.size		= (2220*SZ_256K), //3751
 	},
 	{
 		.name		= "efs",
@@ -77,7 +77,7 @@ struct mtd_partition s3c_partition_info[] = {
 };
 
 
-/* INFORMATIONS TAKEN FROM GALAXYS4G BOOTLOADER
+/* INFORMATION TAKEN FROM GALAXYS4G BOOTLOADER
 
 ==== PARTITION INFORMATION ====
  ID         : IBL+PBL (0x0)
