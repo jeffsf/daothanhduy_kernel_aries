@@ -246,11 +246,7 @@ static int fimc_outdev_set_src_buf(struct fimc_control *ctrl,
 		size = PAGE_ALIGN(y_size + cb_size);
 		break;
 	case V4L2_PIX_FMT_NV12T:
-#ifdef CONFIG_SAMSUNG_GALAXYS4G
-		fimc_get_nv12t_size(width, height, &y_size, &cb_size);
-#else
 		fimc_get_nv12t_size(width, height, &y_size, &cb_size, 0);
-#endif
 		size = PAGE_ALIGN(y_size + cb_size);
 		break;
 	case V4L2_PIX_FMT_NV16:
@@ -1890,13 +1886,8 @@ int fimc_output_set_dst_addr(struct fimc_control *ctrl,
 
 	memset(&buf_set, 0x00, sizeof(buf_set));
 
-#ifdef CONFIG_SAMSUNG_GALAXYS4G
-	if (V4L2_PIX_FMT_NV12T == format)
-		fimc_get_nv12t_size(width, height, &y_size, &c_size);
-#else
 	if (V4L2_PIX_FMT_NV12T == format)
 		fimc_get_nv12t_size(width, height, &y_size, &c_size, ctx->rotate);
-#endif
 
 	switch (format) {
 	case V4L2_PIX_FMT_RGB32:
