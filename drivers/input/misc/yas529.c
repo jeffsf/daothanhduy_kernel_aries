@@ -2802,6 +2802,7 @@ geomagnetic_input_work_func(struct work_struct *work)
 
 			hwdep_driver.ioctl(YAS529_IOC_GET_DRIVER_STATE,
 				(unsigned long) &state);
+				
 #ifdef CONFIG_SAMSUNG_GALAXYS4GMTD
 			geomagnetic_multi_lock();
 			data->driver_state = state;
