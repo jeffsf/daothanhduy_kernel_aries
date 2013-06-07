@@ -1917,17 +1917,6 @@ int fimc_streamon_capture(void *fh)
 			fimc_hwset_output_yuv(ctrl, cap->fmt.pixelformat);
 
 		fimc_hwset_output_size(ctrl, cap->fmt.width, cap->fmt.height);
-#ifdef CONFIG_MACH_ARIES
-		if ((device_id != 0) && (vtmode != 1)) {
-			ctrl->cap->rotate = 90;
-			dev_err(ctrl->dev, "%s, rotate 90", __func__);
-		}
-#else // CONFIG_MACH_P1
-		if ((fimc->active_camera == CAMERA_ID_FRONT) && (ctrl->vt_mode == 0)) {
-			ctrl->cap->rotate = 270;
-			dev_err(ctrl->dev, "%s, rotate 270", __func__);
-		}
-#endif
 
 		fimc_hwset_output_scan(ctrl, &cap->fmt);
 		fimc_hwset_output_rot_flip(ctrl, cap->rotate, cap->flip);
