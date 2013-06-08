@@ -150,6 +150,7 @@ static int geomagnetic_lock(void);
 static int geomagnetic_unlock(void);
 static void geomagnetic_current_time(int32_t *sec, int32_t *msec);
 
+#ifdef CONFIG_SAMSUNG_GALAXYS4G
 struct geomagnetic_data {
 	struct input_dev *input_data;
 	struct input_dev *input_raw;
@@ -160,9 +161,6 @@ struct geomagnetic_data {
 	atomic_t last_data[3];
 	atomic_t last_status;
 	atomic_t enable;
-#if !defined(CONFIG_SAMSUNG_GALAXYS4G)
-	atomic_t disabling;
-#endif
 	atomic_t filter_enable;
 	atomic_t filter_len;
 	atomic_t delay;
@@ -170,6 +168,26 @@ struct geomagnetic_data {
 	int32_t distortion[3];
 	int32_t shape;
 	struct yas529_driver_state driver_state;
+#else
+struct geomagnetic_data {
+	struct input_dev *input_data;
+	struct input_dev *input_raw;
+    struct yas529_platform_data *pdata;
+	struct delayed_work work;
+	struct semaphore driver_lock;
+	struct semaphore multi_lock;
+	atomic_t last_data[3];
+	atomic_t last_status;
+	atomic_t enable;
+	atomic_t disabling;
+	atomic_t filter_enable;
+	atomic_t filter_len;
+	atomic_t delay;
+	int32_t threshold;
+	int32_t distortion[3];
+	int32_t shape;
+	struct yas529_driver_state driver_state;
+#endif
 };
 
 static struct geomagnetic_hwdep_driver hwdep_driver = {
@@ -2953,20 +2971,32 @@ geomagnetic_probe(struct i2c_client *client, const struct i2c_device_id *id)
 		rt = -ENOMEM;
 		goto err;
 	}
-	data->threshold = YAS529_DEFAULT_THRESHOLD;
+#ifdef CONFIG_SAMSUNG_GALAXYS4G
+data->threshold = YAS529_DEFAULT_THRESHOLD;
 	for (i = 0; i < 3; i++)
 		data->distortion[i] = YAS529_DEFAULT_DISTORTION;
 	data->shape = YAS529_DEFAULT_SHAPE;
 	atomic_set(&data->enable, 0);
-#if !defined(CONFIG_SAMSUNG_GALAXYS4G)
-	atomic_set(&data->disabling, 0);
-#endif
 	for (i = 0; i < 3; i++)
 		atomic_set(&data->last_data[i], 0);
 	atomic_set(&data->last_status, 0);
 	INIT_DELAYED_WORK(&data->work, geomagnetic_input_work_func);
 	sema_init(&data->driver_lock, 1);
 	sema_init(&data->multi_lock, 1);
+#else
+	data->threshold = YAS529_DEFAULT_THRESHOLD;
+	for (i = 0; i < 3; i++)
+		data->distortion[i] = YAS529_DEFAULT_DISTORTION;
+	data->shape = YAS529_DEFAULT_SHAPE;
+	atomic_set(&data->enable, 0);
+	atomic_set(&data->disabling, 0);
+	for (i = 0; i < 3; i++)
+		atomic_set(&data->last_data[i], 0);
+	atomic_set(&data->last_status, 0);
+	INIT_DELAYED_WORK(&data->work, geomagnetic_input_work_func);
+	sema_init(&data->driver_lock, 1);
+	sema_init(&data->multi_lock, 1);
+#endif
 
 	input_data = input_allocate_device();
 	if (input_data == NULL) {
