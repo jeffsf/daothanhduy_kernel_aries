@@ -478,21 +478,6 @@ extern struct fimc_limit fimc43_limits[FIMC_DEVICES];
 extern struct fimc_limit fimc50_limits[FIMC_DEVICES];
 
 /* general */
-#ifdef CONFIG_SAMSUNG_GALAXYS4G
-extern void s3c_csis_start(int lanes, int settle, int align,
-					int width, int height,
-					int pixel_format);
-extern int fimc_dma_alloc(struct fimc_control *ctrl,
-					struct fimc_buf_set *bs,
-					int i, int align);
-extern void fimc_dma_free(struct fimc_control *ctrl,
-					struct fimc_buf_set *bs, int i);
-extern u32 fimc_mapping_rot_flip(u32 rot, u32 flip);
-extern int fimc_get_scaler_factor(u32 src, u32 tar, u32 *ratio, u32 *shift);
-extern void fimc_get_nv12t_size(int img_hres, int img_vres,
-					int *y_size, int *cb_size);
-extern void fimc_clk_en(struct fimc_control *ctrl, bool on);
-#else
 extern void s3c_csis_start(int lanes, int settle, int align,
 					int width, int height,
 					int pixel_format);
@@ -506,7 +491,6 @@ extern int fimc_get_scaler_factor(u32 src, u32 tar, u32 *ratio, u32 *shift);
 extern void fimc_get_nv12t_size(int img_hres, int img_vres,
 					int *y_size, int *cb_size, int rotate);
 extern void fimc_clk_en(struct fimc_control *ctrl, bool on);
-#endif
 
 /* camera */
 extern int fimc_select_camera(struct fimc_control *ctrl);
