@@ -733,24 +733,44 @@ static int __init init_log(struct logger_log *log)
 static int __init logger_init(void)
 {
 	int ret;
-
-	ret = init_log(&log_main);
+	ret = create_log(LOGGER_LOG_MAIN, 32*1024);
 	if (unlikely(ret))
 		goto out;
 
-	ret = init_log(&log_events);
+	ret = create_log(LOGGER_LOG_EVENTS, 32*1024);
 	if (unlikely(ret))
 		goto out;
 
-	ret = init_log(&log_radio);
+	ret = create_log(LOGGER_LOG_RADIO, 32*1024);
 	if (unlikely(ret))
 		goto out;
 
-	ret = init_log(&log_system);
+	ret = create_log(LOGGER_LOG_SYSTEM, 32*1024);
 	if (unlikely(ret))
 		goto out;
 
 out:
 	return ret;
 }
+
+static void __exit logger_exit(void)
+{
+	struct logger_log *current_log, *next_log;
+
+	list_for_each_entry_safe(current_log, next_log, &log_list, logs) {
+		/* we have to delete all the entry inside log_list */
+		misc_deregister(&current_log->misc);
+		vfree(current_log->buffer);
+		kfree(current_log->misc.name);
+		list_del(&current_log->logs);
+		kfree(current_log);
+	}
+}
+
+
 device_initcall(logger_init);
+module_exit(logger_exit);
+
+MODULE_LICENSE("GPL");
+MODULE_AUTHOR("Robert Love, <rlove@google.com>");
+MODULE_DESCRIPTION("Android Logger");
