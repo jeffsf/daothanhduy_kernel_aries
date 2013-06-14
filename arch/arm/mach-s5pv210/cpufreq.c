@@ -250,9 +250,6 @@ unsigned int s5pv210_getspeed(unsigned int cpu)
 #ifdef CONFIG_DVFS_LIMIT
 void s5pv210_lock_dvfs_high_level(uint nToken, uint perf_level)
 {
-	uint freq_level;
-	struct cpufreq_policy *policy;
-
 	//printk(KERN_DEBUG "%s : lock with token(%d) level(%d) current(%X)\n",
 	//		__func__, nToken, perf_level, g_dvfs_high_lock_token);
 
@@ -302,6 +299,10 @@ void s5pv210_unlock_dvfs_high_level(unsigned int nToken)
 
 	//printk(KERN_DEBUG "%s : unlock with token(%d) current(%X) level(%d)\n",
 	//		__func__, nToken, g_dvfs_high_lock_token, g_dvfs_high_lock_limit);
+	/* Reevaluate cpufreq policy with the effect of calling the governor with a
+	 * CPUFREQ_GOV_LIMITS event, so that the governor sets its preferred
+	 * frequency with the new (or no) DVFS limit. */
+	cpufreq_update_policy(0);
 }
 EXPORT_SYMBOL(s5pv210_unlock_dvfs_high_level);
 #endif
