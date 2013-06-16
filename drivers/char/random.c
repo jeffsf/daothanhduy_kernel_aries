@@ -1451,6 +1451,7 @@ late_initcall(random_int_secret_init);
 DEFINE_PER_CPU(__u32 [MD5_DIGEST_WORDS], get_random_int_hash);
 unsigned int get_random_int(void)
 {
+<<<<<<< HEAD
 	__u32 *hash;
 	unsigned int ret;
 
@@ -1459,6 +1460,11 @@ unsigned int get_random_int(void)
 
 	hash = get_cpu_var(get_random_int_hash);
 
+=======
+	__u32 *hash = get_cpu_var(get_random_int_hash);
+	unsigned int ret;
+
+>>>>>>> v3.1
 	hash[0] += current->pid + jiffies + get_cycles();
 	md5_transform(hash, random_int_secret);
 	ret = hash[0];

@@ -43,7 +43,11 @@ static struct mfd_cell max8998_devs[] = {
 	}, {
 		.name = "max8998-rtc",
 	}, {
+<<<<<<< HEAD
 		.name = "max8998-charger",
+=======
+		.name = "max8998-battery",
+>>>>>>> v3.1
 	},
 };
 
