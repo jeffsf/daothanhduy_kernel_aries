@@ -64,18 +64,13 @@ static LIST_HEAD(clocks);
  */
 DEFINE_SPINLOCK(clocks_lock);
 
-/* Global watchdog clock used by arch_wtd_reset() callback */
-struct clk *s3c2410_wdtclk;
-static int __init s3c_wdt_reset_init(void)
+/* enable and disable calls for use with the clk struct */
+
+static int clk_null_enable(struct clk *clk, int enable)
 {
-	s3c2410_wdtclk = clk_get(NULL, "watchdog");
-	if (IS_ERR(s3c2410_wdtclk))
-		printk(KERN_WARNING "%s: warning: cannot get watchdog clock\n", __func__);
 	return 0;
 }
-arch_initcall(s3c_wdt_reset_init);
 
-<<<<<<< HEAD
 static int dev_is_s3c_uart(struct device *dev)
 {
 	struct platform_device **pdev = s3c24xx_uart_devs;
@@ -148,18 +143,11 @@ found_it:
 	spin_unlock(&clocks_lock);
 	return clk;
 }
-=======
-/* enable and disable calls for use with the clk struct */
->>>>>>> v3.1
 
-static int clk_null_enable(struct clk *clk, int enable)
+void clk_put(struct clk *clk)
 {
-<<<<<<< HEAD
 	pr_debug("%s on %s %d %pS", __func__, clk->name, clk->id, clk->dev);
 	module_put(clk->owner);
-=======
-	return 0;
->>>>>>> v3.1
 }
 
 void _clk_enable(struct clk *clk)
@@ -293,6 +281,8 @@ int clk_set_parent(struct clk *clk, struct clk *parent)
 	return ret;
 }
 
+EXPORT_SYMBOL(clk_get);
+EXPORT_SYMBOL(clk_put);
 EXPORT_SYMBOL(clk_enable);
 EXPORT_SYMBOL(clk_disable);
 EXPORT_SYMBOL(clk_get_rate);
@@ -315,6 +305,7 @@ struct clk_ops clk_ops_def_setrate = {
 
 struct clk clk_xtal = {
 	.name		= "xtal",
+	.id		= -1,
 	.rate		= 0,
 	.parent		= NULL,
 	.ctrlbit	= 0,
@@ -322,25 +313,30 @@ struct clk clk_xtal = {
 
 struct clk clk_ext = {
 	.name		= "ext",
+	.id		= -1,
 };
 
 struct clk clk_epll = {
 	.name		= "epll",
+	.id		= -1,
 };
 
 struct clk clk_mpll = {
 	.name		= "mpll",
+	.id		= -1,
 	.ops		= &clk_ops_def_setrate,
 };
 
 struct clk clk_upll = {
 	.name		= "upll",
+	.id		= -1,
 	.parent		= NULL,
 	.ctrlbit	= 0,
 };
 
 struct clk clk_f = {
 	.name		= "fclk",
+	.id		= -1,
 	.rate		= 0,
 	.parent		= &clk_mpll,
 	.ctrlbit	= 0,
@@ -348,6 +344,7 @@ struct clk clk_f = {
 
 struct clk clk_h = {
 	.name		= "hclk",
+	.id		= -1,
 	.rate		= 0,
 	.parent		= NULL,
 	.ctrlbit	= 0,
@@ -356,6 +353,7 @@ struct clk clk_h = {
 
 struct clk clk_p = {
 	.name		= "pclk",
+	.id		= -1,
 	.rate		= 0,
 	.parent		= NULL,
 	.ctrlbit	= 0,
@@ -364,6 +362,7 @@ struct clk clk_p = {
 
 struct clk clk_usb_bus = {
 	.name		= "usb-bus",
+	.id		= -1,
 	.rate		= 0,
 	.parent		= &clk_upll,
 };
@@ -371,6 +370,7 @@ struct clk clk_usb_bus = {
 
 struct clk s3c24xx_uclk = {
 	.name		= "uclk",
+	.id		= -1,
 };
 
 /* initialise the clock system */
@@ -386,7 +386,6 @@ int s3c24xx_register_clock(struct clk *clk)
 	if (clk->enable == NULL)
 		clk->enable = clk_null_enable;
 
-<<<<<<< HEAD
 	/* add to the list of available clocks */
 
 	/* Quick check to see if this clock has already been registered. */
@@ -414,13 +413,6 @@ int s3c24xx_register_clock(struct clk *clk)
 	}
 	list_add(&clk->list, &clocks);
 	spin_unlock(&clocks_lock);
-=======
-	/* fill up the clk_lookup structure and register it*/
-	clk->lookup.dev_id = clk->devname;
-	clk->lookup.con_id = clk->name;
-	clk->lookup.clk = clk;
-	clkdev_add(&clk->lookup);
->>>>>>> v3.1
 
 	return 0;
 }
@@ -525,20 +517,16 @@ static struct dentry *clk_debugfs_root;
 static int clk_debugfs_register_one(struct clk *c)
 {
 	int err;
-	struct dentry *d;
+	struct dentry *d, *child, *child_tmp;
 	struct clk *pa = c->parent;
 	char s[255];
 	char *p = s;
 	int i;
 
-<<<<<<< HEAD
 	p += sprintf(p, "%s", c->name);
 
 	if (c->id >= 0)
 		p += sprintf(p, ":%d", c->id);
-=======
-	p += sprintf(p, "%s", c->devname);
->>>>>>> v3.1
 
 	for (i = 1; i < 16; i++) {
 		d = debugfs_create_dir(s, clk_debugfs_root);
@@ -576,7 +564,10 @@ static int clk_debugfs_register_one(struct clk *c)
 	return 0;
 
 err_out:
-	debugfs_remove_recursive(c->dent);
+	d = c->dent;
+	list_for_each_entry_safe(child, child_tmp, &d->d_subdirs, d_u.d_child)
+		debugfs_remove(child);
+	debugfs_remove(c->dent);
 	return err;
 }
 

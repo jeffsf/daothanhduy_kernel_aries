@@ -38,10 +38,7 @@ struct dst_entry {
 	unsigned long		expires;
 	struct dst_entry	*path;
 	struct neighbour __rcu	*_neighbour;
-<<<<<<< HEAD
 	struct hh_cache		*hh;
-=======
->>>>>>> v3.1
 #ifdef CONFIG_XFRM
 	struct xfrm_state	*xfrm;
 #else
@@ -49,14 +46,6 @@ struct dst_entry {
 #endif
 	int			(*input)(struct sk_buff*);
 	int			(*output)(struct sk_buff*);
-
-	int			flags;
-#define DST_HOST		0x0001
-#define DST_NOXFRM		0x0002
-#define DST_NOPOLICY		0x0004
-#define DST_NOHASH		0x0008
-#define DST_NOCACHE		0x0010
-#define DST_NOCOUNT		0x0020
 
 	short			error;
 	short			obsolete;
@@ -73,7 +62,7 @@ struct dst_entry {
 	 * (L1_CACHE_SIZE would be too much)
 	 */
 #ifdef CONFIG_64BIT
-	long			__pad_to_align_refcnt[2];
+	long			__pad_to_align_refcnt[1];
 #endif
 	/*
 	 * __refcnt wants to be on a different cache line from
@@ -82,7 +71,6 @@ struct dst_entry {
 	atomic_t		__refcnt;	/* client references	*/
 	int			__use;
 	unsigned long		lastuse;
-<<<<<<< HEAD
 	int			flags;
 #define DST_HOST		0x0001
 #define DST_NOXFRM		0x0002
@@ -91,8 +79,6 @@ struct dst_entry {
 #define DST_NOCACHE		0x0010
 #define DST_NOCOUNT		0x0020
 #define DST_XFRM_TUNNEL		0x0100
-=======
->>>>>>> v3.1
 	union {
 		struct dst_entry	*next;
 		struct rtable __rcu	*rt_next;
@@ -409,14 +395,6 @@ static inline void dst_confirm(struct dst_entry *dst)
 		neigh_confirm(n);
 		rcu_read_unlock();
 	}
-<<<<<<< HEAD
-=======
-}
-
-static inline struct neighbour *dst_neigh_lookup(const struct dst_entry *dst, const void *daddr)
-{
-	return dst->ops->neigh_lookup(dst, daddr);
->>>>>>> v3.1
 }
 
 static inline void dst_link_failure(struct sk_buff *skb)

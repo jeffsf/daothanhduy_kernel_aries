@@ -276,6 +276,7 @@ enum {
 };
 
 struct adapter;
+struct vlan_group;
 struct sge_rspq;
 
 struct port_info {

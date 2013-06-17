@@ -24,6 +24,7 @@ struct ad7476_chip_info {
 };
 
 struct ad7476_state {
+	struct iio_dev			*indio_dev;
 	struct spi_device		*spi;
 	const struct ad7476_chip_info	*chip_info;
 	struct regulator		*reg;
@@ -50,11 +51,11 @@ enum ad7476_supported_device_ids {
 };
 
 #ifdef CONFIG_IIO_RING_BUFFER
-int ad7476_scan_from_ring(struct iio_dev *indio_dev);
+int ad7476_scan_from_ring(struct ad7476_state *st);
 int ad7476_register_ring_funcs_and_init(struct iio_dev *indio_dev);
 void ad7476_ring_cleanup(struct iio_dev *indio_dev);
 #else /* CONFIG_IIO_RING_BUFFER */
-static inline int ad7476_scan_from_ring(struct iio_dev *indio_dev)
+static inline int ad7476_scan_from_ring(struct ad7476_state *st)
 {
 	return 0;
 }

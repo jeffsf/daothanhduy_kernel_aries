@@ -44,7 +44,6 @@ static inline void arch_reset(char mode, const char *cmd)
 	 */
 	if (realview_reset)
 		realview_reset(mode);
-	dsb();
 }
 
 #endif

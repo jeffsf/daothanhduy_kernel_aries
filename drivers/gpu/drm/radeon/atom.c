@@ -1254,9 +1254,6 @@ struct atom_context *atom_parse(struct card_info *card, void *bios)
 	char name[512];
 	int i;
 
-	if (!ctx)
-		return NULL;
-
 	ctx->card = card;
 	ctx->bios = bios;
 

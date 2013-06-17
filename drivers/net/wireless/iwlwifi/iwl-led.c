@@ -28,6 +28,8 @@
 #include <linux/kernel.h>
 #include <linux/module.h>
 #include <linux/init.h>
+#include <linux/pci.h>
+#include <linux/dma-mapping.h>
 #include <linux/delay.h>
 #include <linux/skbuff.h>
 #include <linux/netdevice.h>
@@ -38,9 +40,13 @@
 
 #include "iwl-dev.h"
 #include "iwl-core.h"
-#include "iwl-agn.h"
 #include "iwl-io.h"
-#include "iwl-trans.h"
+
+/* default: IWL_LED_BLINK(0) using blinking index table */
+static int led_mode;
+module_param(led_mode, int, S_IRUGO);
+MODULE_PARM_DESC(led_mode, "0=system default, "
+		"1=On(RF On)/Off(RF Off), 2=blinking");
 
 /* Throughput		OFF time(ms)	ON time (ms)
  *	>300			25		25
@@ -112,7 +118,7 @@ static int iwl_send_led_cmd(struct iwl_priv *priv, struct iwl_led_cmd *led_cmd)
 	if (reg != (reg & CSR_LED_BSM_CTRL_MSK))
 		iwl_write32(priv, CSR_LED_REG, reg & CSR_LED_BSM_CTRL_MSK);
 
-	return trans_send_cmd(&priv->trans, &cmd);
+	return iwl_send_cmd(priv, &cmd);
 }
 
 /* Set led pattern command */
@@ -175,7 +181,7 @@ static int iwl_led_blink_set(struct led_classdev *led_cdev,
 
 void iwl_leds_init(struct iwl_priv *priv)
 {
-	int mode = iwlagn_mod_params.led_mode;
+	int mode = led_mode;
 	int ret;
 
 	if (mode == IWL_LED_DEFAULT)
@@ -203,8 +209,7 @@ void iwl_leds_init(struct iwl_priv *priv)
 		break;
 	}
 
-	ret = led_classdev_register(priv->bus->dev,
-				    &priv->led);
+	ret = led_classdev_register(&priv->pci_dev->dev, &priv->led);
 	if (ret) {
 		kfree(priv->led.name);
 		return;

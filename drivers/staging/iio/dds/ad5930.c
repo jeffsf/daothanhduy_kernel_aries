@@ -35,6 +35,7 @@ struct ad5903_config {
 
 struct ad5930_state {
 	struct mutex lock;
+	struct iio_dev *idev;
 	struct spi_device *sdev;
 };
 
@@ -48,7 +49,7 @@ static ssize_t ad5930_set_parameter(struct device *dev,
 	int ret;
 	struct ad5903_config *config = (struct ad5903_config *)buf;
 	struct iio_dev *idev = dev_get_drvdata(dev);
-	struct ad5930_state *st = iio_priv(idev);
+	struct ad5930_state *st = idev->dev_data;
 
 	config->control = (config->control & ~value_mask);
 	config->incnum = (config->control & ~value_mask) | (1 << addr_shift);
@@ -82,35 +83,42 @@ static struct attribute *ad5930_attributes[] = {
 };
 
 static const struct attribute_group ad5930_attribute_group = {
+	.name = DRV_NAME,
 	.attrs = ad5930_attributes,
 };
 
 static const struct iio_info ad5930_info = {
 	.attrs = &ad5930_attribute_group,
+
 	.driver_module = THIS_MODULE,
 };
 
 static int __devinit ad5930_probe(struct spi_device *spi)
 {
 	struct ad5930_state *st;
-	struct iio_dev *idev;
 	int ret = 0;
 
-	idev = iio_allocate_device(sizeof(*st));
-	if (idev == NULL) {
+	st = kzalloc(sizeof(*st), GFP_KERNEL);
+	if (st == NULL) {
 		ret = -ENOMEM;
 		goto error_ret;
 	}
-	spi_set_drvdata(spi, idev);
-	st = iio_priv(idev);
+	spi_set_drvdata(spi, st);
 
 	mutex_init(&st->lock);
 	st->sdev = spi;
-	idev->dev.parent = &spi->dev;
-	idev->info = &ad5930_info;
-	idev->modes = INDIO_DIRECT_MODE;
 
-	ret = iio_device_register(idev);
+	st->idev = iio_allocate_device(0);
+	if (st->idev == NULL) {
+		ret = -ENOMEM;
+		goto error_free_st;
+	}
+	st->idev->dev.parent = &spi->dev;
+	st->idev->dev_data = (void *)(st);
+	st->idev->info = &ad5930_info;
+	st->idev->modes = INDIO_DIRECT_MODE;
+
+	ret = iio_device_register(st->idev);
 	if (ret)
 		goto error_free_dev;
 	spi->max_speed_hz = 2000000;
@@ -121,14 +129,19 @@ static int __devinit ad5930_probe(struct spi_device *spi)
 	return 0;
 
 error_free_dev:
-	iio_free_device(idev);
+	iio_free_device(st->idev);
+error_free_st:
+	kfree(st);
 error_ret:
 	return ret;
 }
 
 static int __devexit ad5930_remove(struct spi_device *spi)
 {
-	iio_device_unregister(spi_get_drvdata(spi));
+	struct ad5930_state *st = spi_get_drvdata(spi);
+
+	iio_device_unregister(st->idev);
+	kfree(st);
 
 	return 0;
 }

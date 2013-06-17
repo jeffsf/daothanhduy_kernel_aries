@@ -110,6 +110,7 @@ struct ad9910_config {
 
 struct ad9910_state {
 	struct mutex lock;
+	struct iio_dev *idev;
 	struct spi_device *sdev;
 };
 
@@ -123,7 +124,7 @@ static ssize_t ad9910_set_parameter(struct device *dev,
 	int ret;
 	struct ad9910_config *config = (struct ad9910_config *)buf;
 	struct iio_dev *idev = dev_get_drvdata(dev);
-	struct ad9910_state *st = iio_priv(idev);
+	struct ad9910_state *st = idev->dev_data;
 
 	xfer.len = 5;
 	xfer.tx_buf = &config->auxdac[0];
@@ -364,24 +365,30 @@ static const struct iio_info ad9910_info = {
 static int __devinit ad9910_probe(struct spi_device *spi)
 {
 	struct ad9910_state *st;
-	struct iio_dev *idev;
 	int ret = 0;
 
-	idev = iio_allocate_device(sizeof(*st));
-	if (idev == NULL) {
+	st = kzalloc(sizeof(*st), GFP_KERNEL);
+	if (st == NULL) {
 		ret = -ENOMEM;
 		goto error_ret;
 	}
-	spi_set_drvdata(spi, idev);
-	st = iio_priv(idev);
+	spi_set_drvdata(spi, st);
+
 	mutex_init(&st->lock);
 	st->sdev = spi;
 
-	idev->dev.parent = &spi->dev;
-	idev->info = &ad9910_info;
-	idev->modes = INDIO_DIRECT_MODE;
+	st->idev = iio_allocate_device(0);
+	if (st->idev == NULL) {
+		ret = -ENOMEM;
+		goto error_free_st;
+	}
+	st->idev->dev.parent = &spi->dev;
 
-	ret = iio_device_register(idev);
+	st->idev->info = &ad9910_info;
+	st->idev->dev_data = (void *)(st);
+	st->idev->modes = INDIO_DIRECT_MODE;
+
+	ret = iio_device_register(st->idev);
 	if (ret)
 		goto error_free_dev;
 	spi->max_speed_hz = 2000000;
@@ -392,14 +399,19 @@ static int __devinit ad9910_probe(struct spi_device *spi)
 	return 0;
 
 error_free_dev:
-	iio_free_device(idev);
+	iio_free_device(st->idev);
+error_free_st:
+	kfree(st);
 error_ret:
 	return ret;
 }
 
 static int __devexit ad9910_remove(struct spi_device *spi)
 {
-	iio_device_unregister(spi_get_drvdata(spi));
+	struct ad9910_state *st = spi_get_drvdata(spi);
+
+	iio_device_unregister(st->idev);
+	kfree(st);
 
 	return 0;
 }

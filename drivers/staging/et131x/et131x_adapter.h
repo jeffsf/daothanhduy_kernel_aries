@@ -67,7 +67,7 @@
  * Do not change these values: if changed, then change also in respective
  * TXdma and Rxdma engines
  */
-#define NUM_DESC_PER_RING_TX         512    /* TX Do not change these values */
+#define NUM_DESC_PER_RING_TX         512	/* TX Do not change these values */
 #define NUM_TCB                      64
 
 /*
@@ -98,7 +98,11 @@ struct rfd {
 #define FLOW_NONE	3
 
 /* Struct to define some device statistics */
-struct ce_stats {
+typedef struct _ce_stats_t {
+	/* Link Input/Output stats */
+	uint64_t ipackets;	/* # of in packets */
+	uint64_t opackets;	/* # of out packets */
+
 	/* MIB II variables
 	 *
 	 * NOTE: atomic_t types are only guaranteed to store 24-bits; if we
@@ -114,7 +118,7 @@ struct ce_stats {
 	u32 norcvbuf;	/* # Rx packets discarded */
 	u32 noxmtbuf;	/* # Tx packets discarded */
 
-	/* Transceiver state informations. */
+	/* Transciever state informations. */
 	u8 xcvr_addr;
 	u32 xcvr_id;
 
@@ -139,7 +143,7 @@ struct ce_stats {
 
 	u32 SynchrounousIterations;
 	u32 InterruptStatus;
-};
+} CE_STATS_t, *PCE_STATS_t;
 
 
 /* The private adapter structure */
@@ -150,7 +154,7 @@ struct et131x_adapter {
 	struct work_struct task;
 
 	/* Flags that indicate current state of the adapter */
-	u32 flags;
+	u32 Flags;
 	u32 HwErrCount;
 
 	/* Configuration  */
@@ -182,7 +186,7 @@ struct et131x_adapter {
 	u8 MCList[NIC_MAX_MCAST_LIST][ETH_ALEN];
 
 	/* Pointer to the device's PCI register space */
-	struct address_map __iomem *regs;
+	ADDRESS_MAP_t __iomem *regs;
 
 	/* Registry parameters */
 	u8 SpeedDuplex;		/* speed/duplex */
@@ -222,7 +226,7 @@ struct et131x_adapter {
 	u32 CachedMaskValue;
 
 	/* Xcvr status at last poll */
-	u16 bmsr;
+	MI_BMSR_t Bmsr;
 
 	/* Tx Memory Variables */
 	struct tx_ring tx_ring;
@@ -235,9 +239,10 @@ struct et131x_adapter {
 	u8 ReplicaPhyLoopbkPF;	/* Replica Enable Pass/Fail */
 
 	/* Stats */
-	struct ce_stats stats;
+	CE_STATS_t Stats;
 
 	struct net_device_stats net_stats;
+	struct net_device_stats net_stats_prev;
 };
 
 #endif /* __ET131X_ADAPTER_H__ */

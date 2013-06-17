@@ -128,15 +128,6 @@ struct max8998_charger_data {
  * @wakeup: Allow to wake up from suspend
  * @rtc_delay: LP3974 RTC chip bug that requires delay after a register
  * write before reading it.
- * @eoc: End of Charge Level in percent: 10% ~ 45% by 5% step
- *   If it equals 0, leave it unchanged.
- *   Otherwise, it is a invalid value.
- * @restart: Restart Level in mV: 100, 150, 200, and -1 for disable.
- *   If it equals 0, leave it unchanged.
- *   Otherwise, it is a invalid value.
- * @timeout: Full Timeout in hours: 5, 6, 7, and -1 for disable.
- *   If it equals 0, leave it unchanged.
- *   Otherwise, leave it unchanged.
  */
 struct max8998_platform_data {
 	struct max8998_regulator_data	*regulators;
@@ -158,14 +149,8 @@ struct max8998_platform_data {
 	int				buck2_default_idx;
 	bool				wakeup;
 	bool				rtc_delay;
-<<<<<<< HEAD
 #endif
 	struct max8998_charger_data	*charger;
-=======
-	int				eoc;
-	int				restart;
-	int				timeout;
->>>>>>> v3.1
 };
 
 #endif /*  __LINUX_MFD_MAX8998_H */

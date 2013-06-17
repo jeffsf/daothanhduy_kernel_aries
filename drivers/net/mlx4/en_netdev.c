@@ -45,6 +45,25 @@
 #include "mlx4_en.h"
 #include "en_port.h"
 
+
+static void mlx4_en_vlan_rx_register(struct net_device *dev, struct vlan_group *grp)
+{
+	struct mlx4_en_priv *priv = netdev_priv(dev);
+	struct mlx4_en_dev *mdev = priv->mdev;
+	int err;
+
+	en_dbg(HW, priv, "Registering VLAN group:%p\n", grp);
+	priv->vlgrp = grp;
+
+	mutex_lock(&mdev->state_lock);
+	if (mdev->device_up && priv->port_up) {
+		err = mlx4_SET_VLAN_FLTR(mdev->dev, priv->port, grp);
+		if (err)
+			en_err(priv, "Failed configuring VLAN filter\n");
+	}
+	mutex_unlock(&mdev->state_lock);
+}
+
 static void mlx4_en_vlan_rx_add_vid(struct net_device *dev, unsigned short vid)
 {
 	struct mlx4_en_priv *priv = netdev_priv(dev);
@@ -52,14 +71,16 @@ static void mlx4_en_vlan_rx_add_vid(struct net_device *dev, unsigned short vid)
 	int err;
 	int idx;
 
-	en_dbg(HW, priv, "adding VLAN:%d\n", vid);
+	if (!priv->vlgrp)
+		return;
 
-	set_bit(vid, priv->active_vlans);
+	en_dbg(HW, priv, "adding VLAN:%d (vlgrp entry:%p)\n",
+	       vid, vlan_group_get_device(priv->vlgrp, vid));
 
 	/* Add VID to port VLAN filter */
 	mutex_lock(&mdev->state_lock);
 	if (mdev->device_up && priv->port_up) {
-		err = mlx4_SET_VLAN_FLTR(mdev->dev, priv);
+		err = mlx4_SET_VLAN_FLTR(mdev->dev, priv->port, priv->vlgrp);
 		if (err)
 			en_err(priv, "Failed configuring VLAN filter\n");
 	}
@@ -76,9 +97,12 @@ static void mlx4_en_vlan_rx_kill_vid(struct net_device *dev, unsigned short vid)
 	int err;
 	int idx;
 
-	en_dbg(HW, priv, "Killing VID:%d\n", vid);
+	if (!priv->vlgrp)
+		return;
 
-	clear_bit(vid, priv->active_vlans);
+	en_dbg(HW, priv, "Killing VID:%d (vlgrp:%p vlgrp entry:%p)\n",
+	       vid, priv->vlgrp, vlan_group_get_device(priv->vlgrp, vid));
+	vlan_group_set_device(priv->vlgrp, vid, NULL);
 
 	/* Remove VID from port VLAN filter */
 	mutex_lock(&mdev->state_lock);
@@ -88,7 +112,7 @@ static void mlx4_en_vlan_rx_kill_vid(struct net_device *dev, unsigned short vid)
 		en_err(priv, "could not find vid %d in cache\n", vid);
 
 	if (mdev->device_up && priv->port_up) {
-		err = mlx4_SET_VLAN_FLTR(mdev->dev, priv);
+		err = mlx4_SET_VLAN_FLTR(mdev->dev, priv->port, priv->vlgrp);
 		if (err)
 			en_err(priv, "Failed configuring VLAN filter\n");
 	}
@@ -215,8 +239,7 @@ static void mlx4_en_do_set_multicast(struct work_struct *work)
 			priv->flags |= MLX4_EN_FLAG_PROMISC;
 
 			/* Enable promiscouos mode */
-			if (!(mdev->dev->caps.flags &
-						MLX4_DEV_CAP_FLAG_VEP_UC_STEER))
+			if (!mdev->dev->caps.vep_uc_steering)
 				err = mlx4_SET_PORT_qpn_calc(mdev->dev, priv->port,
 							     priv->base_qpn, 1);
 			else
@@ -242,10 +265,12 @@ static void mlx4_en_do_set_multicast(struct work_struct *work)
 				priv->flags |= MLX4_EN_FLAG_MC_PROMISC;
 			}
 
-			/* Disable port VLAN filter */
-			err = mlx4_SET_VLAN_FLTR(mdev->dev, priv);
-			if (err)
-				en_err(priv, "Failed disabling VLAN filter\n");
+			if (priv->vlgrp) {
+				/* Disable port VLAN filter */
+				err = mlx4_SET_VLAN_FLTR(mdev->dev, priv->port, NULL);
+				if (err)
+					en_err(priv, "Failed disabling VLAN filter\n");
+			}
 		}
 		goto out;
 	}
@@ -260,7 +285,7 @@ static void mlx4_en_do_set_multicast(struct work_struct *work)
 		priv->flags &= ~MLX4_EN_FLAG_PROMISC;
 
 		/* Disable promiscouos mode */
-		if (!(mdev->dev->caps.flags & MLX4_DEV_CAP_FLAG_VEP_UC_STEER))
+		if (!mdev->dev->caps.vep_uc_steering)
 			err = mlx4_SET_PORT_qpn_calc(mdev->dev, priv->port,
 						     priv->base_qpn, 0);
 		else
@@ -279,7 +304,7 @@ static void mlx4_en_do_set_multicast(struct work_struct *work)
 		}
 
 		/* Enable port VLAN filter */
-		err = mlx4_SET_VLAN_FLTR(mdev->dev, priv);
+		err = mlx4_SET_VLAN_FLTR(mdev->dev, priv->port, priv->vlgrp);
 		if (err)
 			en_err(priv, "Failed enabling VLAN filter\n");
 	}
@@ -1021,6 +1046,7 @@ static const struct net_device_ops mlx4_netdev_ops = {
 	.ndo_validate_addr	= eth_validate_addr,
 	.ndo_change_mtu		= mlx4_en_change_mtu,
 	.ndo_tx_timeout		= mlx4_en_tx_timeout,
+	.ndo_vlan_rx_register	= mlx4_en_vlan_rx_register,
 	.ndo_vlan_rx_add_vid	= mlx4_en_vlan_rx_add_vid,
 	.ndo_vlan_rx_kill_vid	= mlx4_en_vlan_rx_kill_vid,
 #ifdef CONFIG_NET_POLL_CONTROLLER

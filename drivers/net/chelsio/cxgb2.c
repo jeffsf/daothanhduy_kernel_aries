@@ -263,8 +263,6 @@ static int cxgb_open(struct net_device *dev)
 	if (!other_ports && adapter->params.stats_update_period)
 		schedule_mac_stats_update(adapter,
 					  adapter->params.stats_update_period);
-
-	t1_vlan_mode(adapter, dev->features);
 	return 0;
 }
 
@@ -851,30 +849,19 @@ static int t1_set_mac_addr(struct net_device *dev, void *p)
 	return 0;
 }
 
-static u32 t1_fix_features(struct net_device *dev, u32 features)
+#if defined(CONFIG_VLAN_8021Q) || defined(CONFIG_VLAN_8021Q_MODULE)
+static void t1_vlan_rx_register(struct net_device *dev,
+				   struct vlan_group *grp)
 {
-	/*
-	 * Since there is no support for separate rx/tx vlan accel
-	 * enable/disable make sure tx flag is always in same state as rx.
-	 */
-	if (features & NETIF_F_HW_VLAN_RX)
-		features |= NETIF_F_HW_VLAN_TX;
-	else
-		features &= ~NETIF_F_HW_VLAN_TX;
-
-	return features;
-}
-
-static int t1_set_features(struct net_device *dev, u32 features)
-{
-	u32 changed = dev->features ^ features;
 	struct adapter *adapter = dev->ml_priv;
 
-	if (changed & NETIF_F_HW_VLAN_RX)
-		t1_vlan_mode(adapter, features);
-
-	return 0;
+	spin_lock_irq(&adapter->async_lock);
+	adapter->vlan_grp = grp;
+	t1_set_vlan_accel(adapter, grp != NULL);
+	spin_unlock_irq(&adapter->async_lock);
 }
+#endif
+
 #ifdef CONFIG_NET_POLL_CONTROLLER
 static void t1_netpoll(struct net_device *dev)
 {
@@ -968,8 +955,9 @@ static const struct net_device_ops cxgb_netdev_ops = {
 	.ndo_do_ioctl		= t1_ioctl,
 	.ndo_change_mtu		= t1_change_mtu,
 	.ndo_set_mac_address	= t1_set_mac_addr,
-	.ndo_fix_features	= t1_fix_features,
-	.ndo_set_features	= t1_set_features,
+#if defined(CONFIG_VLAN_8021Q) || defined(CONFIG_VLAN_8021Q_MODULE)
+	.ndo_vlan_rx_register	= t1_vlan_rx_register,
+#endif
 #ifdef CONFIG_NET_POLL_CONTROLLER
 	.ndo_poll_controller	= t1_netpoll,
 #endif
@@ -1092,9 +1080,10 @@ static int __devinit init_one(struct pci_dev *pdev,
 		if (pci_using_dac)
 			netdev->features |= NETIF_F_HIGHDMA;
 		if (vlan_tso_capable(adapter)) {
+#if defined(CONFIG_VLAN_8021Q) || defined(CONFIG_VLAN_8021Q_MODULE)
 			netdev->features |=
 				NETIF_F_HW_VLAN_TX | NETIF_F_HW_VLAN_RX;
-			netdev->hw_features |= NETIF_F_HW_VLAN_RX;
+#endif
 
 			/* T204: disable TSO */
 			if (!(is_T2(adapter)) || bi->port_number != 4) {

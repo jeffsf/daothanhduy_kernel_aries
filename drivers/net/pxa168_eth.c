@@ -40,7 +40,6 @@
 #include <linux/clk.h>
 #include <linux/phy.h>
 #include <linux/io.h>
-#include <linux/interrupt.h>
 #include <linux/types.h>
 #include <asm/pgtable.h>
 #include <asm/system.h>
@@ -503,7 +502,7 @@ static int add_del_hash_entry(struct pxa168_eth_private *pep,
 	 * Pick the appropriate table, start scanning for free/reusable
 	 * entries at the index obtained by hashing the specified MAC address
 	 */
-	start = pep->htpr;
+	start = (struct addr_table_entry *)(pep->htpr);
 	entry = start + hash_function(mac_addr);
 	for (i = 0; i < HOP_NUMBER; i++) {
 		if (!(le32_to_cpu(entry->lo) & HASH_ENTRY_VALID)) {
@@ -1268,9 +1267,6 @@ static int pxa168_eth_start_xmit(struct sk_buff *skb, struct net_device *dev)
 	pep->tx_skb[tx_index] = skb;
 	desc->byte_cnt = length;
 	desc->buf_ptr = dma_map_single(NULL, skb->data, length, DMA_TO_DEVICE);
-
-	skb_tx_timestamp(skb);
-
 	wmb();
 	desc->cmd_sts = BUF_OWNED_BY_DMA | TX_GEN_CRC | TX_FIRST_DESC |
 			TX_ZERO_PADDING | TX_LAST_DESC | TX_EN_INT;
@@ -1506,7 +1502,7 @@ static int pxa168_eth_probe(struct platform_device *pdev)
 		err = -ENODEV;
 		goto err_netdev;
 	}
-	pep->base = ioremap(res->start, resource_size(res));
+	pep->base = ioremap(res->start, res->end - res->start + 1);
 	if (pep->base == NULL) {
 		err = -ENOMEM;
 		goto err_netdev;

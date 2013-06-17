@@ -5,7 +5,7 @@
  * NetLabel system.  The NetLabel system manages static and dynamic label
  * mappings for network protocols such as CIPSO and RIPSO.
  *
- * Author: Paul Moore <paul@paul-moore.com>
+ * Author: Paul Moore <paul.moore@hp.com>
  *
  */
 
@@ -52,7 +52,7 @@
 #include <net/net_namespace.h>
 #include <net/netlabel.h>
 #include <asm/bug.h>
-#include <linux/atomic.h>
+#include <asm/atomic.h>
 
 #include "netlabel_user.h"
 #include "netlabel_addrlist.h"
@@ -116,7 +116,8 @@ struct netlbl_unlhsh_walk_arg {
  * hash table should be okay */
 static DEFINE_SPINLOCK(netlbl_unlhsh_lock);
 #define netlbl_unlhsh_rcu_deref(p) \
-	rcu_dereference_check(p, lockdep_is_held(&netlbl_unlhsh_lock))
+	rcu_dereference_check(p, rcu_read_lock_held() || \
+				 lockdep_is_held(&netlbl_unlhsh_lock))
 static struct netlbl_unlhsh_tbl *netlbl_unlhsh = NULL;
 static struct netlbl_unlhsh_iface *netlbl_unlhsh_def = NULL;
 
@@ -425,9 +426,10 @@ int netlbl_unlhsh_add(struct net *net,
 					      audit_info);
 	switch (addr_len) {
 	case sizeof(struct in_addr): {
-		const struct in_addr *addr4 = addr;
-		const struct in_addr *mask4 = mask;
+		struct in_addr *addr4, *mask4;
 
+		addr4 = (struct in_addr *)addr;
+		mask4 = (struct in_addr *)mask;
 		ret_val = netlbl_unlhsh_add_addr4(iface, addr4, mask4, secid);
 		if (audit_buf != NULL)
 			netlbl_af4list_audit_addr(audit_buf, 1,
@@ -438,9 +440,10 @@ int netlbl_unlhsh_add(struct net *net,
 	}
 #if defined(CONFIG_IPV6) || defined(CONFIG_IPV6_MODULE)
 	case sizeof(struct in6_addr): {
-		const struct in6_addr *addr6 = addr;
-		const struct in6_addr *mask6 = mask;
+		struct in6_addr *addr6, *mask6;
 
+		addr6 = (struct in6_addr *)addr;
+		mask6 = (struct in6_addr *)mask;
 		ret_val = netlbl_unlhsh_add_addr6(iface, addr6, mask6, secid);
 		if (audit_buf != NULL)
 			netlbl_af6list_audit_addr(audit_buf, 1,

@@ -50,7 +50,7 @@
 #include "skge.h"
 
 #define DRV_NAME		"skge"
-#define DRV_VERSION		"1.14"
+#define DRV_VERSION		"1.13"
 
 #define DEFAULT_TX_RING_SIZE	128
 #define DEFAULT_RX_RING_SIZE	512
@@ -83,20 +83,17 @@ module_param(debug, int, 0);
 MODULE_PARM_DESC(debug, "Debug level (0=none,...,16=all)");
 
 static DEFINE_PCI_DEVICE_TABLE(skge_id_table) = {
-	{ PCI_DEVICE(PCI_VENDOR_ID_3COM, 0x1700) },	  /* 3Com 3C940 */
-	{ PCI_DEVICE(PCI_VENDOR_ID_3COM, 0x80EB) },	  /* 3Com 3C940B */
-#ifdef CONFIG_SKGE_GENESIS
-	{ PCI_DEVICE(PCI_VENDOR_ID_SYSKONNECT, 0x4300) }, /* SK-9xx */
-#endif
-	{ PCI_DEVICE(PCI_VENDOR_ID_SYSKONNECT, 0x4320) }, /* SK-98xx V2.0 */
-	{ PCI_DEVICE(PCI_VENDOR_ID_DLINK, 0x4b01) },	  /* D-Link DGE-530T (rev.B) */
-	{ PCI_DEVICE(PCI_VENDOR_ID_DLINK, 0x4c00) },	  /* D-Link DGE-530T */
-	{ PCI_DEVICE(PCI_VENDOR_ID_DLINK, 0x4302) },	  /* D-Link DGE-530T Rev C1 */
-	{ PCI_DEVICE(PCI_VENDOR_ID_MARVELL, 0x4320) },	  /* Marvell Yukon 88E8001/8003/8010 */
-	{ PCI_DEVICE(PCI_VENDOR_ID_MARVELL, 0x5005) },	  /* Belkin */
-	{ PCI_DEVICE(PCI_VENDOR_ID_CNET, 0x434E) }, 	  /* CNet PowerG-2000 */
-	{ PCI_DEVICE(PCI_VENDOR_ID_LINKSYS, 0x1064) },	  /* Linksys EG1064 v2 */
-	{ PCI_VENDOR_ID_LINKSYS, 0x1032, PCI_ANY_ID, 0x0015 }, /* Linksys EG1032 v2 */
+	{ PCI_DEVICE(PCI_VENDOR_ID_3COM, PCI_DEVICE_ID_3COM_3C940) },
+	{ PCI_DEVICE(PCI_VENDOR_ID_3COM, PCI_DEVICE_ID_3COM_3C940B) },
+	{ PCI_DEVICE(PCI_VENDOR_ID_SYSKONNECT, PCI_DEVICE_ID_SYSKONNECT_GE) },
+	{ PCI_DEVICE(PCI_VENDOR_ID_SYSKONNECT, PCI_DEVICE_ID_SYSKONNECT_YU) },
+	{ PCI_DEVICE(PCI_VENDOR_ID_DLINK, PCI_DEVICE_ID_DLINK_DGE510T) },
+	{ PCI_DEVICE(PCI_VENDOR_ID_DLINK, 0x4b01) },	/* DGE-530T */
+	{ PCI_DEVICE(PCI_VENDOR_ID_MARVELL, 0x4320) },
+	{ PCI_DEVICE(PCI_VENDOR_ID_MARVELL, 0x5005) }, /* Belkin */
+	{ PCI_DEVICE(PCI_VENDOR_ID_CNET, PCI_DEVICE_ID_CNET_GIGACARD) },
+	{ PCI_DEVICE(PCI_VENDOR_ID_LINKSYS, PCI_DEVICE_ID_LINKSYS_EG1064) },
+	{ PCI_VENDOR_ID_LINKSYS, 0x1032, PCI_ANY_ID, 0x0015 },
 	{ 0 }
 };
 MODULE_DEVICE_TABLE(pci, skge_id_table);
@@ -121,15 +118,6 @@ static const u32 rxirqmask[] = { IS_R1_F, IS_R2_F };
 static const u32 txirqmask[] = { IS_XA1_F, IS_XA2_F };
 static const u32 napimask[] = { IS_R1_F|IS_XA1_F, IS_R2_F|IS_XA2_F };
 static const u32 portmask[] = { IS_PORT_1, IS_PORT_2 };
-
-static inline bool is_genesis(const struct skge_hw *hw)
-{
-#ifdef CONFIG_SKGE_GENESIS
-	return hw->chip_id == CHIP_ID_GENESIS;
-#else
-	return false;
-#endif
-}
 
 static int skge_get_regs_len(struct net_device *dev)
 {
@@ -158,7 +146,7 @@ static void skge_get_regs(struct net_device *dev, struct ethtool_regs *regs,
 /* Wake on Lan only supported on Yukon chips with rev 1 or above */
 static u32 wol_supported(const struct skge_hw *hw)
 {
-	if (is_genesis(hw))
+	if (hw->chip_id == CHIP_ID_GENESIS)
 		return 0;
 
 	if (hw->chip_id == CHIP_ID_YUKON && hw->chip_rev == 0)
@@ -282,7 +270,7 @@ static u32 skge_supported_modes(const struct skge_hw *hw)
 			     SUPPORTED_Autoneg |
 			     SUPPORTED_TP);
 
-		if (is_genesis(hw))
+		if (hw->chip_id == CHIP_ID_GENESIS)
 			supported &= ~(SUPPORTED_10baseT_Half |
 				       SUPPORTED_10baseT_Full |
 				       SUPPORTED_100baseT_Half |
@@ -445,7 +433,7 @@ static void skge_get_ethtool_stats(struct net_device *dev,
 {
 	struct skge_port *skge = netdev_priv(dev);
 
-	if (is_genesis(skge->hw))
+	if (skge->hw->chip_id == CHIP_ID_GENESIS)
 		genesis_get_stats(skge, data);
 	else
 		yukon_get_stats(skge, data);
@@ -460,7 +448,7 @@ static struct net_device_stats *skge_get_stats(struct net_device *dev)
 	struct skge_port *skge = netdev_priv(dev);
 	u64 data[ARRAY_SIZE(skge_stats)];
 
-	if (is_genesis(skge->hw))
+	if (skge->hw->chip_id == CHIP_ID_GENESIS)
 		genesis_get_stats(skge, data);
 	else
 		yukon_get_stats(skge, data);
@@ -601,7 +589,7 @@ static int skge_set_pauseparam(struct net_device *dev,
 /* Chip internal frequency for clock calculations */
 static inline u32 hwkhz(const struct skge_hw *hw)
 {
-	return is_genesis(hw) ? 53125 : 78125;
+	return (hw->chip_id == CHIP_ID_GENESIS) ? 53125 : 78125;
 }
 
 /* Chip HZ to microseconds */
@@ -686,7 +674,7 @@ static void skge_led(struct skge_port *skge, enum led_mode mode)
 	int port = skge->port;
 
 	spin_lock_bh(&hw->phy_lock);
-	if (is_genesis(hw)) {
+	if (hw->chip_id == CHIP_ID_GENESIS) {
 		switch (mode) {
 		case LED_MODE_OFF:
 			if (hw->phy_type == SK_PHY_BCOM)
@@ -1065,6 +1053,7 @@ static void skge_link_down(struct skge_port *skge)
 	netif_info(skge, link, skge->netdev, "Link is down\n");
 }
 
+
 static void xm_link_down(struct skge_hw *hw, int port)
 {
 	struct net_device *dev = hw->dev[port];
@@ -1182,6 +1171,7 @@ static void genesis_reset(struct skge_hw *hw, int port)
 	xm_write32(hw, port, XM_MODE, reg | XM_MD_FTF);
 	xm_write32(hw, port, XM_MODE, reg | XM_MD_FRF);
 }
+
 
 /* Convert mode to MII values  */
 static const u16 phy_pause_map[] = {
@@ -2415,7 +2405,7 @@ static void skge_phy_reset(struct skge_port *skge)
 	netif_carrier_off(skge->netdev);
 
 	spin_lock_bh(&hw->phy_lock);
-	if (is_genesis(hw)) {
+	if (hw->chip_id == CHIP_ID_GENESIS) {
 		genesis_reset(hw, port);
 		genesis_mac_init(hw, port);
 	} else {
@@ -2446,8 +2436,7 @@ static int skge_ioctl(struct net_device *dev, struct ifreq *ifr, int cmd)
 	case SIOCGMIIREG: {
 		u16 val = 0;
 		spin_lock_bh(&hw->phy_lock);
-
-		if (is_genesis(hw))
+		if (hw->chip_id == CHIP_ID_GENESIS)
 			err = __xm_phy_read(hw, skge->port, data->reg_num & 0x1f, &val);
 		else
 			err = __gm_phy_read(hw, skge->port, data->reg_num & 0x1f, &val);
@@ -2458,7 +2447,7 @@ static int skge_ioctl(struct net_device *dev, struct ifreq *ifr, int cmd)
 
 	case SIOCSMIIREG:
 		spin_lock_bh(&hw->phy_lock);
-		if (is_genesis(hw))
+		if (hw->chip_id == CHIP_ID_GENESIS)
 			err = xm_phy_write(hw, skge->port, data->reg_num & 0x1f,
 				   data->val_in);
 		else
@@ -2570,7 +2559,7 @@ static int skge_up(struct net_device *dev)
 
 	/* Initialize MAC */
 	spin_lock_bh(&hw->phy_lock);
-	if (is_genesis(hw))
+	if (hw->chip_id == CHIP_ID_GENESIS)
 		genesis_mac_init(hw, port);
 	else
 		yukon_mac_init(hw, port);
@@ -2632,7 +2621,7 @@ static int skge_down(struct net_device *dev)
 
 	netif_tx_disable(dev);
 
-	if (is_genesis(hw) && hw->phy_type == SK_PHY_XMAC)
+	if (hw->chip_id == CHIP_ID_GENESIS && hw->phy_type == SK_PHY_XMAC)
 		del_timer_sync(&skge->link_timer);
 
 	napi_disable(&skge->napi);
@@ -2644,7 +2633,7 @@ static int skge_down(struct net_device *dev)
 	spin_unlock_irq(&hw->hw_lock);
 
 	skge_write8(skge->hw, SK_REG(skge->port, LNK_LED_REG), LED_OFF);
-	if (is_genesis(hw))
+	if (hw->chip_id == CHIP_ID_GENESIS)
 		genesis_stop(skge);
 	else
 		yukon_stop(skge);
@@ -2672,7 +2661,7 @@ static int skge_down(struct net_device *dev)
 
 	skge_rx_stop(hw, port);
 
-	if (is_genesis(hw)) {
+	if (hw->chip_id == CHIP_ID_GENESIS) {
 		skge_write8(hw, SK_REG(port, TX_MFF_CTRL2), MFF_RST_SET);
 		skge_write8(hw, SK_REG(port, RX_MFF_CTRL2), MFF_RST_SET);
 	} else {
@@ -2968,7 +2957,7 @@ static void yukon_set_multicast(struct net_device *dev)
 
 static inline u16 phy_length(const struct skge_hw *hw, u32 status)
 {
-	if (is_genesis(hw))
+	if (hw->chip_id == CHIP_ID_GENESIS)
 		return status >> XMR_FS_LEN_SHIFT;
 	else
 		return status >> GMR_FS_LEN_SHIFT;
@@ -2976,7 +2965,7 @@ static inline u16 phy_length(const struct skge_hw *hw, u32 status)
 
 static inline int bad_phy_status(const struct skge_hw *hw, u32 status)
 {
-	if (is_genesis(hw))
+	if (hw->chip_id == CHIP_ID_GENESIS)
 		return (status & (XMR_FS_ERR | XMR_FS_2L_VLAN)) != 0;
 	else
 		return (status & GMR_FS_ANY_ERR) ||
@@ -2986,8 +2975,9 @@ static inline int bad_phy_status(const struct skge_hw *hw, u32 status)
 static void skge_set_multicast(struct net_device *dev)
 {
 	struct skge_port *skge = netdev_priv(dev);
+	struct skge_hw *hw = skge->hw;
 
-	if (is_genesis(skge->hw))
+	if (hw->chip_id == CHIP_ID_GENESIS)
 		genesis_set_multicast(dev);
 	else
 		yukon_set_multicast(dev);
@@ -3067,7 +3057,7 @@ error:
 		     "rx err, slot %td control 0x%x status 0x%x\n",
 		     e - skge->rx_ring.start, control, status);
 
-	if (is_genesis(skge->hw)) {
+	if (skge->hw->chip_id == CHIP_ID_GENESIS) {
 		if (status & (XMR_FS_RUNT|XMR_FS_LNG_ERR))
 			dev->stats.rx_length_errors++;
 		if (status & XMR_FS_FRA_ERR)
@@ -3181,7 +3171,7 @@ static void skge_mac_parity(struct skge_hw *hw, int port)
 
 	++dev->stats.tx_heartbeat_errors;
 
-	if (is_genesis(hw))
+	if (hw->chip_id == CHIP_ID_GENESIS)
 		skge_write16(hw, SK_REG(port, TX_MFF_CTRL1),
 			     MFF_CLR_PERR);
 	else
@@ -3193,7 +3183,7 @@ static void skge_mac_parity(struct skge_hw *hw, int port)
 
 static void skge_mac_intr(struct skge_hw *hw, int port)
 {
-	if (is_genesis(hw))
+	if (hw->chip_id == CHIP_ID_GENESIS)
 		genesis_mac_intr(hw, port);
 	else
 		yukon_mac_intr(hw, port);
@@ -3205,7 +3195,7 @@ static void skge_error_irq(struct skge_hw *hw)
 	struct pci_dev *pdev = hw->pdev;
 	u32 hwstatus = skge_read32(hw, B0_HWE_ISRC);
 
-	if (is_genesis(hw)) {
+	if (hw->chip_id == CHIP_ID_GENESIS) {
 		/* clear xmac errors */
 		if (hwstatus & (IS_NO_STAT_M1|IS_NO_TIST_M1))
 			skge_write16(hw, RX_MFF_CTRL1, MFF_CLR_INSTAT);
@@ -3288,7 +3278,7 @@ static void skge_extirq(unsigned long arg)
 			struct skge_port *skge = netdev_priv(dev);
 
 			spin_lock(&hw->phy_lock);
-			if (!is_genesis(hw))
+			if (hw->chip_id != CHIP_ID_GENESIS)
 				yukon_phy_intr(skge);
 			else if (hw->phy_type == SK_PHY_BCOM)
 				bcom_phy_intr(skge);
@@ -3407,7 +3397,7 @@ static int skge_set_mac_address(struct net_device *dev, void *p)
 		memcpy_toio(hw->regs + B2_MAC_1 + port*8, dev->dev_addr, ETH_ALEN);
 		memcpy_toio(hw->regs + B2_MAC_2 + port*8, dev->dev_addr, ETH_ALEN);
 
-		if (is_genesis(hw))
+		if (hw->chip_id == CHIP_ID_GENESIS)
 			xm_outaddr(hw, port, XM_SA, dev->dev_addr);
 		else {
 			gma_set_addr(hw, port, GM_SRC_ADDR_1L, dev->dev_addr);
@@ -3483,7 +3473,6 @@ static int skge_reset(struct skge_hw *hw)
 
 	switch (hw->chip_id) {
 	case CHIP_ID_GENESIS:
-#ifdef CONFIG_SKGE_GENESIS
 		switch (hw->phy_type) {
 		case SK_PHY_XMAC:
 			hw->phy_addr = PHY_ADDR_XMAC;
@@ -3497,10 +3486,6 @@ static int skge_reset(struct skge_hw *hw)
 			return -EOPNOTSUPP;
 		}
 		break;
-#else
-		dev_err(&hw->pdev->dev, "Genesis chip detected but not configured\n");
-		return -EOPNOTSUPP;
-#endif
 
 	case CHIP_ID_YUKON:
 	case CHIP_ID_YUKON_LITE:
@@ -3523,7 +3508,7 @@ static int skge_reset(struct skge_hw *hw)
 
 	/* read the adapters RAM size */
 	t8 = skge_read8(hw, B2_E_0);
-	if (is_genesis(hw)) {
+	if (hw->chip_id == CHIP_ID_GENESIS) {
 		if (t8 == 3) {
 			/* special case: 4 x 64k x 36, offset = 0x80000 */
 			hw->ram_size = 0x100000;
@@ -3538,10 +3523,10 @@ static int skge_reset(struct skge_hw *hw)
 	hw->intr_mask = IS_HW_ERR;
 
 	/* Use PHY IRQ for all but fiber based Genesis board */
-	if (!(is_genesis(hw) && hw->phy_type == SK_PHY_XMAC))
+	if (!(hw->chip_id == CHIP_ID_GENESIS && hw->phy_type == SK_PHY_XMAC))
 		hw->intr_mask |= IS_EXT_REG;
 
-	if (is_genesis(hw))
+	if (hw->chip_id == CHIP_ID_GENESIS)
 		genesis_init(hw);
 	else {
 		/* switch power to VCC (WA for VAUX problem) */
@@ -3606,7 +3591,7 @@ static int skge_reset(struct skge_hw *hw)
 	skge_write32(hw, B0_IMSK, hw->intr_mask);
 
 	for (i = 0; i < hw->ports; i++) {
-		if (is_genesis(hw))
+		if (hw->chip_id == CHIP_ID_GENESIS)
 			genesis_reset(hw, i);
 		else
 			yukon_reset(hw, i);
@@ -3817,9 +3802,9 @@ static struct net_device *skge_devinit(struct skge_hw *hw, int port,
 	skge->port = port;
 
 	/* Only used for Genesis XMAC */
-	if (is_genesis(hw))
-	    setup_timer(&skge->link_timer, xm_link_timer, (unsigned long) skge);
-	else {
+	setup_timer(&skge->link_timer, xm_link_timer, (unsigned long) skge);
+
+	if (hw->chip_id != CHIP_ID_GENESIS) {
 		dev->hw_features = NETIF_F_IP_CSUM | NETIF_F_SG |
 		                   NETIF_F_RXCSUM;
 		dev->features |= dev->hw_features;

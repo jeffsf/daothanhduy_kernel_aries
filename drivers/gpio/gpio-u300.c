@@ -1,8 +1,11 @@
 /*
- * U300 GPIO module.
+ *
+ * arch/arm/mach-u300/gpio.c
+ *
  *
  * Copyright (C) 2007-2009 ST-Ericsson AB
  * License terms: GNU General Public License (GPL) version 2
+ * U300 GPIO module.
  * This can driver either of the two basic GPIO cores
  * available in the U300 platforms:
  * COH 901 335   - Used in DB3150 (U300 1.0) and DB3200 (U330 1.0)
@@ -578,8 +581,8 @@ static int __init gpio_probe(struct platform_device *pdev)
 	if (!memres)
 		goto err_no_resource;
 
-	if (!request_mem_region(memres->start, resource_size(memres),
-				"GPIO Controller")) {
+	if (request_mem_region(memres->start, memres->end - memres->start, "GPIO Controller")
+	    == NULL) {
 		err = -ENODEV;
 		goto err_no_ioregion;
 	}
@@ -637,7 +640,7 @@ static int __init gpio_probe(struct platform_device *pdev)
 		free_irq(gpio_ports[i].irq, &gpio_ports[i]);
 	iounmap(virtbase);
  err_no_ioremap:
-	release_mem_region(memres->start, resource_size(memres));
+	release_mem_region(memres->start, memres->end - memres->start);
  err_no_ioregion:
  err_no_resource:
 	clk_disable(clk);
@@ -657,7 +660,7 @@ static int __exit gpio_remove(struct platform_device *pdev)
 	for (i = 0 ; i < U300_GPIO_NUM_PORTS; i++)
 		free_irq(gpio_ports[i].irq, &gpio_ports[i]);
 	iounmap(virtbase);
-	release_mem_region(memres->start, resource_size(memres));
+	release_mem_region(memres->start, memres->end - memres->start);
 	clk_disable(clk);
 	clk_put(clk);
 	return 0;

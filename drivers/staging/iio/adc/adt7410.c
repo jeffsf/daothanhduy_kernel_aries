@@ -75,6 +75,7 @@
 
 struct adt7410_chip_info {
 	struct i2c_client *client;
+	struct iio_dev *indio_dev;
 	u8  config;
 };
 
@@ -143,7 +144,7 @@ static ssize_t adt7410_show_mode(struct device *dev,
 		char *buf)
 {
 	struct iio_dev *dev_info = dev_get_drvdata(dev);
-	struct adt7410_chip_info *chip = iio_priv(dev_info);
+	struct adt7410_chip_info *chip = dev_info->dev_data;
 	u8 config;
 
 	config = chip->config & ADT7410_MODE_MASK;
@@ -166,7 +167,7 @@ static ssize_t adt7410_store_mode(struct device *dev,
 		size_t len)
 {
 	struct iio_dev *dev_info = dev_get_drvdata(dev);
-	struct adt7410_chip_info *chip = iio_priv(dev_info);
+	struct adt7410_chip_info *chip = dev_info->dev_data;
 	u16 config;
 	int ret;
 
@@ -210,7 +211,7 @@ static ssize_t adt7410_show_resolution(struct device *dev,
 		char *buf)
 {
 	struct iio_dev *dev_info = dev_get_drvdata(dev);
-	struct adt7410_chip_info *chip = iio_priv(dev_info);
+	struct adt7410_chip_info *chip = dev_info->dev_data;
 	int ret;
 	int bits;
 
@@ -232,7 +233,7 @@ static ssize_t adt7410_store_resolution(struct device *dev,
 		size_t len)
 {
 	struct iio_dev *dev_info = dev_get_drvdata(dev);
-	struct adt7410_chip_info *chip = iio_priv(dev_info);
+	struct adt7410_chip_info *chip = dev_info->dev_data;
 	unsigned long data;
 	u16 config;
 	int ret;
@@ -268,7 +269,7 @@ static ssize_t adt7410_show_id(struct device *dev,
 		char *buf)
 {
 	struct iio_dev *dev_info = dev_get_drvdata(dev);
-	struct adt7410_chip_info *chip = iio_priv(dev_info);
+	struct adt7410_chip_info *chip = dev_info->dev_data;
 	u8 id;
 	int ret;
 
@@ -318,7 +319,7 @@ static ssize_t adt7410_show_value(struct device *dev,
 		char *buf)
 {
 	struct iio_dev *dev_info = dev_get_drvdata(dev);
-	struct adt7410_chip_info *chip = iio_priv(dev_info);
+	struct adt7410_chip_info *chip = dev_info->dev_data;
 	u8 status;
 	u16 data;
 	int ret, i = 0;
@@ -357,7 +358,7 @@ static const struct attribute_group adt7410_attribute_group = {
 static irqreturn_t adt7410_event_handler(int irq, void *private)
 {
 	struct iio_dev *indio_dev = private;
-	struct adt7410_chip_info *chip = iio_priv(indio_dev);
+	struct adt7410_chip_info *chip = iio_dev_get_devdata(indio_dev);
 	s64 timestamp = iio_get_time_ns();
 	u8 status;
 
@@ -391,7 +392,7 @@ static ssize_t adt7410_show_event_mode(struct device *dev,
 		char *buf)
 {
 	struct iio_dev *dev_info = dev_get_drvdata(dev);
-	struct adt7410_chip_info *chip = iio_priv(dev_info);
+	struct adt7410_chip_info *chip = dev_info->dev_data;
 	int ret;
 
 	ret = adt7410_i2c_read_byte(chip, ADT7410_CONFIG, &chip->config);
@@ -410,7 +411,7 @@ static ssize_t adt7410_set_event_mode(struct device *dev,
 		size_t len)
 {
 	struct iio_dev *dev_info = dev_get_drvdata(dev);
-	struct adt7410_chip_info *chip = iio_priv(dev_info);
+	struct adt7410_chip_info *chip = dev_info->dev_data;
 	u16 config;
 	int ret;
 
@@ -443,7 +444,7 @@ static ssize_t adt7410_show_fault_queue(struct device *dev,
 		char *buf)
 {
 	struct iio_dev *dev_info = dev_get_drvdata(dev);
-	struct adt7410_chip_info *chip = iio_priv(dev_info);
+	struct adt7410_chip_info *chip = dev_info->dev_data;
 	int ret;
 
 	ret = adt7410_i2c_read_byte(chip, ADT7410_CONFIG, &chip->config);
@@ -459,7 +460,7 @@ static ssize_t adt7410_set_fault_queue(struct device *dev,
 		size_t len)
 {
 	struct iio_dev *dev_info = dev_get_drvdata(dev);
-	struct adt7410_chip_info *chip = iio_priv(dev_info);
+	struct adt7410_chip_info *chip = dev_info->dev_data;
 	unsigned long data;
 	int ret;
 	u8 config;
@@ -489,7 +490,7 @@ static inline ssize_t adt7410_show_t_bound(struct device *dev,
 		char *buf)
 {
 	struct iio_dev *dev_info = dev_get_drvdata(dev);
-	struct adt7410_chip_info *chip = iio_priv(dev_info);
+	struct adt7410_chip_info *chip = dev_info->dev_data;
 	u16 data;
 	int ret;
 
@@ -507,7 +508,7 @@ static inline ssize_t adt7410_set_t_bound(struct device *dev,
 		size_t len)
 {
 	struct iio_dev *dev_info = dev_get_drvdata(dev);
-	struct adt7410_chip_info *chip = iio_priv(dev_info);
+	struct adt7410_chip_info *chip = dev_info->dev_data;
 	long tmp1, tmp2;
 	u16 data;
 	char *pos;
@@ -627,7 +628,7 @@ static ssize_t adt7410_show_t_hyst(struct device *dev,
 		char *buf)
 {
 	struct iio_dev *dev_info = dev_get_drvdata(dev);
-	struct adt7410_chip_info *chip = iio_priv(dev_info);
+	struct adt7410_chip_info *chip = dev_info->dev_data;
 	int ret;
 	u8 t_hyst;
 
@@ -644,7 +645,7 @@ static inline ssize_t adt7410_set_t_hyst(struct device *dev,
 		size_t len)
 {
 	struct iio_dev *dev_info = dev_get_drvdata(dev);
-	struct adt7410_chip_info *chip = iio_priv(dev_info);
+	struct adt7410_chip_info *chip = dev_info->dev_data;
 	int ret;
 	unsigned long data;
 	u8 t_hyst;
@@ -727,27 +728,31 @@ static int __devinit adt7410_probe(struct i2c_client *client,
 		const struct i2c_device_id *id)
 {
 	struct adt7410_chip_info *chip;
-	struct iio_dev *indio_dev;
 	int ret = 0;
 	unsigned long *adt7410_platform_data = client->dev.platform_data;
 
-	indio_dev = iio_allocate_device(sizeof(*chip));
-	if (indio_dev == NULL) {
-		ret = -ENOMEM;
-		goto error_ret;
-	}
-	chip = iio_priv(indio_dev);
+	chip = kzalloc(sizeof(struct adt7410_chip_info), GFP_KERNEL);
+
+	if (chip == NULL)
+		return -ENOMEM;
+
 	/* this is only used for device removal purposes */
-	i2c_set_clientdata(client, indio_dev);
+	i2c_set_clientdata(client, chip);
 
 	chip->client = client;
 
-	indio_dev->name = id->name;
-	indio_dev->dev.parent = &client->dev;
-	indio_dev->info = &adt7410_info;
-	indio_dev->modes = INDIO_DIRECT_MODE;
+	chip->indio_dev = iio_allocate_device(0);
+	if (chip->indio_dev == NULL) {
+		ret = -ENOMEM;
+		goto error_free_chip;
+	}
+	chip->indio_dev->name = id->name;
+	chip->indio_dev->dev.parent = &client->dev;
+	chip->indio_dev->info = &adt7410_info;
+	chip->indio_dev->dev_data = (void *)chip;
+	chip->indio_dev->modes = INDIO_DIRECT_MODE;
 
-	ret = iio_device_register(indio_dev);
+	ret = iio_device_register(chip->indio_dev);
 	if (ret)
 		goto error_free_dev;
 
@@ -758,7 +763,7 @@ static int __devinit adt7410_probe(struct i2c_client *client,
 					   &adt7410_event_handler,
 					   IRQF_TRIGGER_LOW,
 					   id->name,
-					   indio_dev);
+					   chip->indio_dev);
 		if (ret)
 			goto error_unreg_dev;
 	}
@@ -770,7 +775,7 @@ static int __devinit adt7410_probe(struct i2c_client *client,
 					   &adt7410_event_handler,
 					   adt7410_platform_data[1],
 					   id->name,
-					   indio_dev);
+					   chip->indio_dev);
 		if (ret)
 			goto error_unreg_ct_irq;
 	}
@@ -804,27 +809,32 @@ static int __devinit adt7410_probe(struct i2c_client *client,
 	return 0;
 
 error_unreg_int_irq:
-	free_irq(adt7410_platform_data[0], indio_dev);
+	free_irq(adt7410_platform_data[0], chip->indio_dev);
 error_unreg_ct_irq:
-	free_irq(client->irq, indio_dev);
+	free_irq(client->irq, chip->indio_dev);
 error_unreg_dev:
-	iio_device_unregister(indio_dev);
+	iio_device_unregister(chip->indio_dev);
 error_free_dev:
-	iio_free_device(indio_dev);
-error_ret:
+	iio_free_device(chip->indio_dev);
+error_free_chip:
+	kfree(chip);
+
 	return ret;
 }
 
 static int __devexit adt7410_remove(struct i2c_client *client)
 {
-	struct iio_dev *indio_dev = i2c_get_clientdata(client);
+	struct adt7410_chip_info *chip = i2c_get_clientdata(client);
+	struct iio_dev *indio_dev = chip->indio_dev;
 	unsigned long *adt7410_platform_data = client->dev.platform_data;
 
 	if (adt7410_platform_data[0])
-		free_irq(adt7410_platform_data[0], indio_dev);
+		free_irq(adt7410_platform_data[0], chip->indio_dev);
 	if (client->irq)
-		free_irq(client->irq, indio_dev);
+		free_irq(client->irq, chip->indio_dev);
 	iio_device_unregister(indio_dev);
+	iio_free_device(chip->indio_dev);
+	kfree(chip);
 
 	return 0;
 }

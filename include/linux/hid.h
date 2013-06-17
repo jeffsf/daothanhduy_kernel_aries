@@ -453,8 +453,7 @@ struct hid_input {
 
 enum hid_type {
 	HID_TYPE_OTHER = 0,
-	HID_TYPE_USBMOUSE,
-	HID_TYPE_USBNONE
+	HID_TYPE_USBMOUSE
 };
 
 struct hid_driver;

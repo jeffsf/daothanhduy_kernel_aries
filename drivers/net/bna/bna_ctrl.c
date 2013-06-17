@@ -16,7 +16,8 @@
  * www.brocade.com
  */
 #include "bna.h"
-#include "bfa_cs.h"
+#include "bfa_sm.h"
+#include "bfa_wc.h"
 
 static void bna_device_cb_port_stopped(void *arg, enum bna_cb_status status);
 
@@ -379,7 +380,7 @@ bna_llport_sm_stopped(struct bna_llport *llport,
 		break;
 
 	default:
-		bfa_sm_fault(event);
+		bfa_sm_fault(llport->bna, event);
 	}
 }
 
@@ -408,7 +409,7 @@ bna_llport_sm_down(struct bna_llport *llport,
 		break;
 
 	default:
-		bfa_sm_fault(event);
+		bfa_sm_fault(llport->bna, event);
 	}
 }
 
@@ -454,7 +455,7 @@ bna_llport_sm_up_resp_wait(struct bna_llport *llport,
 		break;
 
 	default:
-		bfa_sm_fault(event);
+		bfa_sm_fault(llport->bna, event);
 	}
 }
 
@@ -496,7 +497,7 @@ bna_llport_sm_down_resp_wait(struct bna_llport *llport,
 		break;
 
 	default:
-		bfa_sm_fault(event);
+		bfa_sm_fault(llport->bna, event);
 	}
 }
 
@@ -525,7 +526,7 @@ bna_llport_sm_up(struct bna_llport *llport,
 		break;
 
 	default:
-		bfa_sm_fault(event);
+		bfa_sm_fault(llport->bna, event);
 	}
 }
 
@@ -562,7 +563,7 @@ bna_llport_sm_last_resp_wait(struct bna_llport *llport,
 		break;
 
 	default:
-		bfa_sm_fault(event);
+		bfa_sm_fault(llport->bna, event);
 	}
 }
 
@@ -915,7 +916,7 @@ bna_port_sm_stopped(struct bna_port *port, enum bna_port_event event)
 		break;
 
 	default:
-		bfa_sm_fault(event);
+		bfa_sm_fault(port->bna, event);
 	}
 }
 
@@ -955,7 +956,7 @@ bna_port_sm_mtu_init_wait(struct bna_port *port, enum bna_port_event event)
 		break;
 
 	default:
-		bfa_sm_fault(event);
+		bfa_sm_fault(port->bna, event);
 	}
 }
 
@@ -1000,7 +1001,7 @@ bna_port_sm_pause_init_wait(struct bna_port *port,
 		break;
 
 	default:
-		bfa_sm_fault(event);
+		bfa_sm_fault(port->bna, event);
 	}
 }
 
@@ -1021,7 +1022,7 @@ bna_port_sm_last_resp_wait(struct bna_port *port,
 		break;
 
 	default:
-		bfa_sm_fault(event);
+		bfa_sm_fault(port->bna, event);
 	}
 }
 
@@ -1060,7 +1061,7 @@ bna_port_sm_started(struct bna_port *port,
 		break;
 
 	default:
-		bfa_sm_fault(event);
+		bfa_sm_fault(port->bna, event);
 	}
 }
 
@@ -1085,7 +1086,7 @@ bna_port_sm_pause_cfg_wait(struct bna_port *port,
 		break;
 
 	default:
-		bfa_sm_fault(event);
+		bfa_sm_fault(port->bna, event);
 	}
 }
 
@@ -1110,7 +1111,7 @@ bna_port_sm_rx_stop_wait(struct bna_port *port,
 		break;
 
 	default:
-		bfa_sm_fault(event);
+		bfa_sm_fault(port->bna, event);
 	}
 }
 
@@ -1135,7 +1136,7 @@ bna_port_sm_mtu_cfg_wait(struct bna_port *port, enum bna_port_event event)
 		break;
 
 	default:
-		bfa_sm_fault(event);
+		bfa_sm_fault(port->bna, event);
 	}
 }
 
@@ -1160,7 +1161,7 @@ bna_port_sm_chld_stop_wait(struct bna_port *port,
 		break;
 
 	default:
-		bfa_sm_fault(event);
+		bfa_sm_fault(port->bna, event);
 	}
 }
 
@@ -1471,7 +1472,7 @@ bna_device_sm_stopped(struct bna_device *device,
 		break;
 
 	default:
-		bfa_sm_fault(event);
+		bfa_sm_fault(device->bna, event);
 	}
 }
 
@@ -1511,7 +1512,7 @@ bna_device_sm_ioc_ready_wait(struct bna_device *device,
 		break;
 
 	default:
-		bfa_sm_fault(event);
+		bfa_sm_fault(device->bna, event);
 	}
 }
 
@@ -1541,7 +1542,7 @@ bna_device_sm_ready(struct bna_device *device, enum bna_device_event event)
 		break;
 
 	default:
-		bfa_sm_fault(event);
+		bfa_sm_fault(device->bna, event);
 	}
 }
 
@@ -1567,7 +1568,7 @@ bna_device_sm_port_stop_wait(struct bna_device *device,
 		break;
 
 	default:
-		bfa_sm_fault(event);
+		bfa_sm_fault(device->bna, event);
 	}
 }
 
@@ -1588,7 +1589,7 @@ bna_device_sm_ioc_disable_wait(struct bna_device *device,
 		break;
 
 	default:
-		bfa_sm_fault(event);
+		bfa_sm_fault(device->bna, event);
 	}
 }
 
@@ -1621,7 +1622,7 @@ bna_device_sm_failed(struct bna_device *device,
 		break;
 
 	default:
-		bfa_sm_fault(event);
+		bfa_sm_fault(device->bna, event);
 	}
 }
 

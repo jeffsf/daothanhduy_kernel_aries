@@ -38,7 +38,6 @@ Configuration Options:
 #include <linux/mc146818rtc.h>
 #include <linux/gfp.h>
 #include <linux/delay.h>
-#include <linux/io.h>
 #include <asm/dma.h>
 
 #include "8253.h"

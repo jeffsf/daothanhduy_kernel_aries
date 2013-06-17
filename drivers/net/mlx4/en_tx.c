@@ -172,7 +172,7 @@ int mlx4_en_activate_tx_ring(struct mlx4_en_priv *priv,
 	memset(ring->buf, 0, ring->buf_size);
 
 	ring->qp_state = MLX4_QP_STATE_RST;
-	ring->doorbell_qpn = ring->qp.qpn << 8;
+	ring->doorbell_qpn = swab32(ring->qp.qpn << 8);
 
 	mlx4_en_fill_qp_context(priv, ring->size, ring->stride, 1, 0, ring->qpn,
 				ring->cqn, &ring->context);
@@ -238,7 +238,8 @@ static u32 mlx4_en_free_tx_desc(struct mlx4_en_priv *priv,
 	} else {
 		if (!tx_info->inl) {
 			if ((void *) data >= end) {
-				data = ring->buf + ((void *)data - end);
+				data = (struct mlx4_wqe_data_seg *)
+						(ring->buf + ((void *) data - end));
 			}
 
 			if (tx_info->linear) {
@@ -252,7 +253,7 @@ static u32 mlx4_en_free_tx_desc(struct mlx4_en_priv *priv,
 			for (i = 0; i < frags; i++) {
 				/* Check for wraparound before unmapping */
 				if ((void *) data >= end)
-					data = ring->buf;
+					data = (struct mlx4_wqe_data_seg *) ring->buf;
 				frag = &skb_shinfo(skb)->frags[i];
 				pci_unmap_page(mdev->pdev,
 					(dma_addr_t) be64_to_cpu(data->addr),
@@ -791,7 +792,7 @@ netdev_tx_t mlx4_en_xmit(struct sk_buff *skb, struct net_device *dev)
 		skb_orphan(skb);
 
 	if (ring->bf_enabled && desc_size <= MAX_BF && !bounce && !vlan_tag) {
-		*(__be32 *) (&tx_desc->ctrl.vlan_tag) |= cpu_to_be32(ring->doorbell_qpn);
+		*(u32 *) (&tx_desc->ctrl.vlan_tag) |= ring->doorbell_qpn;
 		op_own |= htonl((bf_index & 0xffff) << 8);
 		/* Ensure new descirptor hits memory
 		* before setting ownership of this descriptor to HW */
@@ -812,7 +813,7 @@ netdev_tx_t mlx4_en_xmit(struct sk_buff *skb, struct net_device *dev)
 		wmb();
 		tx_desc->ctrl.owner_opcode = op_own;
 		wmb();
-		iowrite32be(ring->doorbell_qpn, ring->bf.uar->map + MLX4_SEND_DOORBELL);
+		writel(ring->doorbell_qpn, ring->bf.uar->map + MLX4_SEND_DOORBELL);
 	}
 
 	/* Poll CQ here */

@@ -18,7 +18,6 @@
  */
 
 #include <linux/kernel.h>
-#include <linux/slab.h>
 #include <linux/scatterlist.h>
 #include "solo6x10.h"
 

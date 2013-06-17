@@ -13,6 +13,8 @@
 #include <linux/oprofile.h>
 #include <linux/init.h>
 #include <linux/errno.h>
+#include <linux/oprofile.h>
+#include <linux/errno.h>
 #include <linux/fs.h>
 
 #include "../../../drivers/oprofile/oprof.h"

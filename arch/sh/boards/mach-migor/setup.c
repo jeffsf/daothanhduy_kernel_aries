@@ -214,7 +214,7 @@ static struct platform_device migor_nand_flash_device = {
 	}
 };
 
-static const struct fb_videomode migor_lcd_modes[] = {
+const static struct fb_videomode migor_lcd_modes[] = {
 	{
 #if defined(CONFIG_SH_MIGOR_RTA_WVGA)
 		.name = "LB070WV1",

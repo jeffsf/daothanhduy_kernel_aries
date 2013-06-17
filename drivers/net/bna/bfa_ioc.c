@@ -58,7 +58,6 @@ static bool bfa_nw_auto_recover = true;
 /*
  * forward declarations
  */
-static void bfa_ioc_hw_sem_init(struct bfa_ioc *ioc);
 static void bfa_ioc_hw_sem_get(struct bfa_ioc *ioc);
 static void bfa_ioc_hw_sem_get_cancel(struct bfa_ioc *ioc);
 static void bfa_ioc_hwinit(struct bfa_ioc *ioc, bool force);
@@ -69,10 +68,9 @@ static void bfa_ioc_hb_monitor(struct bfa_ioc *ioc);
 static void bfa_ioc_hb_stop(struct bfa_ioc *ioc);
 static void bfa_ioc_reset(struct bfa_ioc *ioc, bool force);
 static void bfa_ioc_mbox_poll(struct bfa_ioc *ioc);
-static void bfa_ioc_mbox_flush(struct bfa_ioc *ioc);
+static void bfa_ioc_mbox_hbfail(struct bfa_ioc *ioc);
 static void bfa_ioc_recover(struct bfa_ioc *ioc);
 static void bfa_ioc_check_attr_wwns(struct bfa_ioc *ioc);
-static void bfa_ioc_event_notify(struct bfa_ioc *, enum bfa_ioc_event);
 static void bfa_ioc_disable_comp(struct bfa_ioc *ioc);
 static void bfa_ioc_lpu_stop(struct bfa_ioc *ioc);
 static void bfa_ioc_fail_notify(struct bfa_ioc *ioc);
@@ -109,7 +107,7 @@ enum ioc_event {
 	IOC_E_FWRSP_GETATTR	= 6,	/*!< IOC get attribute response	*/
 	IOC_E_DISABLED		= 7,	/*!< f/w disabled		*/
 	IOC_E_INITFAILED	= 8,	/*!< failure notice by iocpf sm	*/
-	IOC_E_PFFAILED		= 9,	/*!< failure notice by iocpf sm	*/
+	IOC_E_PFAILED		= 9,	/*!< failure notice by iocpf sm	*/
 	IOC_E_HBFAIL		= 10,	/*!< heartbeat failure		*/
 	IOC_E_HWERROR		= 11,	/*!< hardware error interrupt	*/
 	IOC_E_TIMEOUT		= 12,	/*!< timeout			*/
@@ -158,7 +156,7 @@ enum iocpf_event {
 	IOCPF_E_ENABLE		= 1,	/*!< IOCPF enable request	*/
 	IOCPF_E_DISABLE		= 2,	/*!< IOCPF disable request	*/
 	IOCPF_E_STOP		= 3,	/*!< stop on driver detach	*/
-	IOCPF_E_FWREADY		= 4,	/*!< f/w initialization done	*/
+	IOCPF_E_FWREADY	 	= 4,	/*!< f/w initialization done	*/
 	IOCPF_E_FWRSP_ENABLE	= 5,	/*!< enable f/w response	*/
 	IOCPF_E_FWRSP_DISABLE	= 6,	/*!< disable f/w response	*/
 	IOCPF_E_FAIL		= 7,	/*!< failure notice by ioc sm	*/
@@ -241,7 +239,7 @@ bfa_ioc_sm_uninit(struct bfa_ioc *ioc, enum ioc_event event)
 		break;
 
 	default:
-		bfa_sm_fault(event);
+		bfa_sm_fault(ioc, event);
 	}
 }
 
@@ -274,7 +272,7 @@ bfa_ioc_sm_reset(struct bfa_ioc *ioc, enum ioc_event event)
 		break;
 
 	default:
-		bfa_sm_fault(event);
+		bfa_sm_fault(ioc, event);
 	}
 }
 
@@ -296,12 +294,12 @@ bfa_ioc_sm_enabling(struct bfa_ioc *ioc, enum ioc_event event)
 		bfa_fsm_set_state(ioc, bfa_ioc_sm_getattr);
 		break;
 
-	case IOC_E_PFFAILED:
+	case IOC_E_PFAILED:
 		/* !!! fall through !!! */
 	case IOC_E_HWERROR:
 		ioc->cbfn->enable_cbfn(ioc->bfa, BFA_STATUS_IOC_FAILURE);
 		bfa_fsm_set_state(ioc, bfa_ioc_sm_fail_retry);
-		if (event != IOC_E_PFFAILED)
+		if (event != IOC_E_PFAILED)
 			bfa_iocpf_initfail(ioc);
 		break;
 
@@ -318,7 +316,7 @@ bfa_ioc_sm_enabling(struct bfa_ioc *ioc, enum ioc_event event)
 		break;
 
 	default:
-		bfa_sm_fault(event);
+		bfa_sm_fault(ioc, event);
 	}
 }
 
@@ -346,14 +344,14 @@ bfa_ioc_sm_getattr(struct bfa_ioc *ioc, enum ioc_event event)
 		bfa_fsm_set_state(ioc, bfa_ioc_sm_op);
 		break;
 
-	case IOC_E_PFFAILED:
+	case IOC_E_PFAILED:
 	case IOC_E_HWERROR:
 		del_timer(&ioc->ioc_timer);
 		/* fall through */
 	case IOC_E_TIMEOUT:
 		ioc->cbfn->enable_cbfn(ioc->bfa, BFA_STATUS_IOC_FAILURE);
 		bfa_fsm_set_state(ioc, bfa_ioc_sm_fail_retry);
-		if (event != IOC_E_PFFAILED)
+		if (event != IOC_E_PFAILED)
 			bfa_iocpf_getattrfail(ioc);
 		break;
 
@@ -366,7 +364,7 @@ bfa_ioc_sm_getattr(struct bfa_ioc *ioc, enum ioc_event event)
 		break;
 
 	default:
-		bfa_sm_fault(event);
+		bfa_sm_fault(ioc, event);
 	}
 }
 
@@ -389,7 +387,7 @@ bfa_ioc_sm_op(struct bfa_ioc *ioc, enum ioc_event event)
 		bfa_fsm_set_state(ioc, bfa_ioc_sm_disabling);
 		break;
 
-	case IOC_E_PFFAILED:
+	case IOC_E_PFAILED:
 	case IOC_E_HWERROR:
 		bfa_ioc_hb_stop(ioc);
 		/* !!! fall through !!! */
@@ -400,12 +398,12 @@ bfa_ioc_sm_op(struct bfa_ioc *ioc, enum ioc_event event)
 		else
 			bfa_fsm_set_state(ioc, bfa_ioc_sm_fail);
 
-		if (event != IOC_E_PFFAILED)
+		if (event != IOC_E_PFAILED)
 			bfa_iocpf_fail(ioc);
 		break;
 
 	default:
-		bfa_sm_fault(event);
+		bfa_sm_fault(ioc, event);
 	}
 }
 
@@ -436,7 +434,7 @@ bfa_ioc_sm_disabling(struct bfa_ioc *ioc, enum ioc_event event)
 		break;
 
 	default:
-		bfa_sm_fault(event);
+		bfa_sm_fault(ioc, event);
 	}
 }
 
@@ -467,7 +465,7 @@ bfa_ioc_sm_disabled(struct bfa_ioc *ioc, enum ioc_event event)
 		break;
 
 	default:
-		bfa_sm_fault(event);
+		bfa_sm_fault(ioc, event);
 	}
 }
 
@@ -487,13 +485,13 @@ bfa_ioc_sm_fail_retry(struct bfa_ioc *ioc, enum ioc_event event)
 		bfa_fsm_set_state(ioc, bfa_ioc_sm_getattr);
 		break;
 
-	case IOC_E_PFFAILED:
+	case IOC_E_PFAILED:
 	case IOC_E_HWERROR:
 		/**
 		 * Initialization retry failed.
 		 */
 		ioc->cbfn->enable_cbfn(ioc->bfa, BFA_STATUS_IOC_FAILURE);
-		if (event != IOC_E_PFFAILED)
+		if (event != IOC_E_PFAILED)
 			bfa_iocpf_initfail(ioc);
 		break;
 
@@ -514,7 +512,7 @@ bfa_ioc_sm_fail_retry(struct bfa_ioc *ioc, enum ioc_event event)
 		break;
 
 	default:
-		bfa_sm_fault(event);
+		bfa_sm_fault(ioc, event);
 	}
 }
 
@@ -548,7 +546,7 @@ bfa_ioc_sm_fail(struct bfa_ioc *ioc, enum ioc_event event)
 		break;
 
 	default:
-		bfa_sm_fault(event);
+		bfa_sm_fault(ioc, event);
 	}
 }
 
@@ -581,7 +579,7 @@ bfa_iocpf_sm_reset(struct bfa_iocpf *iocpf, enum iocpf_event event)
 		break;
 
 	default:
-		bfa_sm_fault(event);
+		bfa_sm_fault(iocpf->ioc, event);
 	}
 }
 
@@ -591,7 +589,6 @@ bfa_iocpf_sm_reset(struct bfa_iocpf *iocpf, enum iocpf_event event)
 static void
 bfa_iocpf_sm_fwcheck_entry(struct bfa_iocpf *iocpf)
 {
-	bfa_ioc_hw_sem_init(iocpf->ioc);
 	bfa_ioc_hw_sem_get(iocpf->ioc);
 }
 
@@ -634,7 +631,7 @@ bfa_iocpf_sm_fwcheck(struct bfa_iocpf *iocpf, enum iocpf_event event)
 		break;
 
 	default:
-		bfa_sm_fault(event);
+		bfa_sm_fault(ioc, event);
 	}
 }
 
@@ -678,7 +675,7 @@ bfa_iocpf_sm_mismatch(struct bfa_iocpf *iocpf, enum iocpf_event event)
 		break;
 
 	default:
-		bfa_sm_fault(event);
+		bfa_sm_fault(ioc, event);
 	}
 }
 
@@ -717,7 +714,7 @@ bfa_iocpf_sm_semwait(struct bfa_iocpf *iocpf, enum iocpf_event event)
 		break;
 
 	default:
-		bfa_sm_fault(event);
+		bfa_sm_fault(ioc, event);
 	}
 }
 
@@ -765,7 +762,7 @@ bfa_iocpf_sm_hwinit(struct bfa_iocpf *iocpf, enum iocpf_event event)
 		break;
 
 	default:
-		bfa_sm_fault(event);
+		bfa_sm_fault(ioc, event);
 	}
 }
 
@@ -816,7 +813,7 @@ bfa_iocpf_sm_enabling(struct bfa_iocpf *iocpf, enum iocpf_event event)
 		break;
 
 	default:
-		bfa_sm_fault(event);
+		bfa_sm_fault(ioc, event);
 	}
 }
 
@@ -859,7 +856,7 @@ bfa_iocpf_sm_ready(struct bfa_iocpf *iocpf, enum iocpf_event event)
 		break;
 
 	default:
-		bfa_sm_fault(event);
+		bfa_sm_fault(ioc, event);
 	}
 }
 
@@ -901,7 +898,7 @@ bfa_iocpf_sm_disabling(struct bfa_iocpf *iocpf, enum iocpf_event event)
 		break;
 
 	default:
-		bfa_sm_fault(event);
+		bfa_sm_fault(ioc, event);
 	}
 }
 
@@ -930,7 +927,7 @@ bfa_iocpf_sm_disabling_sync(struct bfa_iocpf *iocpf, enum iocpf_event event)
 		break;
 
 	default:
-		bfa_sm_fault(event);
+		bfa_sm_fault(ioc, event);
 	}
 }
 
@@ -940,7 +937,6 @@ bfa_iocpf_sm_disabling_sync(struct bfa_iocpf *iocpf, enum iocpf_event event)
 static void
 bfa_iocpf_sm_disabled_entry(struct bfa_iocpf *iocpf)
 {
-	bfa_ioc_mbox_flush(iocpf->ioc);
 	bfa_ioc_pf_disabled(iocpf->ioc);
 }
 
@@ -961,7 +957,7 @@ bfa_iocpf_sm_disabled(struct bfa_iocpf *iocpf, enum iocpf_event event)
 		break;
 
 	default:
-		bfa_sm_fault(event);
+		bfa_sm_fault(ioc, event);
 	}
 }
 
@@ -1013,7 +1009,7 @@ bfa_iocpf_sm_initfail_sync(struct bfa_iocpf *iocpf, enum iocpf_event event)
 		break;
 
 	default:
-		bfa_sm_fault(event);
+		bfa_sm_fault(ioc, event);
 	}
 }
 
@@ -1042,7 +1038,7 @@ bfa_iocpf_sm_initfail(struct bfa_iocpf *iocpf, enum iocpf_event event)
 		break;
 
 	default:
-		bfa_sm_fault(event);
+		bfa_sm_fault(ioc, event);
 	}
 }
 
@@ -1057,7 +1053,7 @@ bfa_iocpf_sm_fail_sync_entry(struct bfa_iocpf *iocpf)
 	/**
 	 * Flush any queued up mailbox requests.
 	 */
-	bfa_ioc_mbox_flush(iocpf->ioc);
+	bfa_ioc_mbox_hbfail(iocpf->ioc);
 	bfa_ioc_hw_sem_get(iocpf->ioc);
 }
 
@@ -1097,7 +1093,7 @@ bfa_iocpf_sm_fail_sync(struct bfa_iocpf *iocpf, enum iocpf_event event)
 		break;
 
 	default:
-		bfa_sm_fault(event);
+		bfa_sm_fault(ioc, event);
 	}
 }
 
@@ -1119,7 +1115,7 @@ bfa_iocpf_sm_fail(struct bfa_iocpf *iocpf, enum iocpf_event event)
 		break;
 
 	default:
-		bfa_sm_fault(event);
+		bfa_sm_fault(iocpf->ioc, event);
 	}
 }
 
@@ -1127,26 +1123,21 @@ bfa_iocpf_sm_fail(struct bfa_iocpf *iocpf, enum iocpf_event event)
  * BFA IOC private functions
  */
 
-/**
- * Notify common modules registered for notification.
- */
-static void
-bfa_ioc_event_notify(struct bfa_ioc *ioc, enum bfa_ioc_event event)
-{
-	struct bfa_ioc_notify *notify;
-	struct list_head			*qe;
-
-	list_for_each(qe, &ioc->notify_q) {
-		notify = (struct bfa_ioc_notify *)qe;
-		notify->cbfn(notify->cbarg, event);
-	}
-}
-
 static void
 bfa_ioc_disable_comp(struct bfa_ioc *ioc)
 {
+	struct list_head			*qe;
+	struct bfa_ioc_hbfail_notify *notify;
+
 	ioc->cbfn->disable_cbfn(ioc->bfa);
-	bfa_ioc_event_notify(ioc, BFA_IOC_E_DISABLED);
+
+	/**
+	 * Notify common modules registered for notification.
+	 */
+	list_for_each(qe, &ioc->hb_notify_q) {
+		notify = (struct bfa_ioc_hbfail_notify *) qe;
+		notify->cbfn(notify->cbarg);
+	}
 }
 
 bool
@@ -1175,29 +1166,6 @@ void
 bfa_nw_ioc_sem_release(void __iomem *sem_reg)
 {
 	writel(1, sem_reg);
-}
-
-static void
-bfa_ioc_hw_sem_init(struct bfa_ioc *ioc)
-{
-	struct bfi_ioc_image_hdr fwhdr;
-	u32 fwstate = readl(ioc->ioc_regs.ioc_fwstate);
-
-	if (fwstate == BFI_IOC_UNINIT)
-		return;
-
-	bfa_nw_ioc_fwver_get(ioc, &fwhdr);
-
-	if (swab32(fwhdr.exec) == BFI_FWBOOT_TYPE_NORMAL)
-		return;
-
-	writel(BFI_IOC_UNINIT, ioc->ioc_regs.ioc_fwstate);
-
-	/*
-	 * Try to lock and then unlock the semaphore.
-	 */
-	readl(ioc->ioc_regs.ioc_sem_reg);
-	writel(1, ioc->ioc_regs.ioc_sem_reg);
 }
 
 static void
@@ -1670,7 +1638,7 @@ bfa_ioc_mbox_poll(struct bfa_ioc *ioc)
  * Cleanup any pending requests.
  */
 static void
-bfa_ioc_mbox_flush(struct bfa_ioc *ioc)
+bfa_ioc_mbox_hbfail(struct bfa_ioc *ioc)
 {
 	struct bfa_ioc_mbox_mod *mod = &ioc->mbox_mod;
 	struct bfa_mbox_cmd *cmd;
@@ -1682,11 +1650,17 @@ bfa_ioc_mbox_flush(struct bfa_ioc *ioc)
 static void
 bfa_ioc_fail_notify(struct bfa_ioc *ioc)
 {
+	struct list_head		*qe;
+	struct bfa_ioc_hbfail_notify	*notify;
+
 	/**
 	 * Notify driver and common modules registered for notification.
 	 */
 	ioc->cbfn->hbfail_cbfn(ioc->bfa);
-	bfa_ioc_event_notify(ioc, BFA_IOC_E_FAILED);
+	list_for_each(qe, &ioc->hb_notify_q) {
+		notify = (struct bfa_ioc_hbfail_notify *) qe;
+		notify->cbfn(notify->cbarg);
+	}
 }
 
 static void
@@ -1710,7 +1684,7 @@ bfa_ioc_pf_initfailed(struct bfa_ioc *ioc)
 static void
 bfa_ioc_pf_failed(struct bfa_ioc *ioc)
 {
-	bfa_fsm_send_event(ioc, IOC_E_PFFAILED);
+	bfa_fsm_send_event(ioc, IOC_E_PFAILED);
 }
 
 static void
@@ -1865,7 +1839,7 @@ bfa_nw_ioc_attach(struct bfa_ioc *ioc, void *bfa, struct bfa_ioc_cbfn *cbfn)
 	ioc->iocpf.ioc  = ioc;
 
 	bfa_ioc_mbox_attach(ioc);
-	INIT_LIST_HEAD(&ioc->notify_q);
+	INIT_LIST_HEAD(&ioc->hb_notify_q);
 
 	bfa_fsm_set_state(ioc, bfa_ioc_sm_uninit);
 	bfa_fsm_send_event(ioc, IOC_E_RESET);
@@ -1995,8 +1969,6 @@ bfa_nw_ioc_mbox_queue(struct bfa_ioc *ioc, struct bfa_mbox_cmd *cmd)
 	 * mailbox is free -- queue command to firmware
 	 */
 	bfa_ioc_mbox_send(ioc, cmd->msg, sizeof(cmd->msg));
-
-	return;
 }
 
 /**
@@ -2029,19 +2001,7 @@ bfa_nw_ioc_mbox_isr(struct bfa_ioc *ioc)
 void
 bfa_nw_ioc_error_isr(struct bfa_ioc *ioc)
 {
-	bfa_ioc_stats(ioc, ioc_hbfails);
-	bfa_ioc_stats_hb_count(ioc, ioc->hb_count);
 	bfa_fsm_send_event(ioc, IOC_E_HWERROR);
-}
-
-/**
- * return true if IOC is disabled
- */
-bool
-bfa_nw_ioc_is_disabled(struct bfa_ioc *ioc)
-{
-	return bfa_fsm_cmp_state(ioc, bfa_ioc_sm_disabling) ||
-		bfa_fsm_cmp_state(ioc, bfa_ioc_sm_disabled);
 }
 
 /**
@@ -2049,10 +2009,10 @@ bfa_nw_ioc_is_disabled(struct bfa_ioc *ioc)
  * modules such as cee, port, diag.
  */
 void
-bfa_nw_ioc_notify_register(struct bfa_ioc *ioc,
-			struct bfa_ioc_notify *notify)
+bfa_nw_ioc_hbfail_register(struct bfa_ioc *ioc,
+			struct bfa_ioc_hbfail_notify *notify)
 {
-	list_add_tail(&notify->qe, &ioc->notify_q);
+	list_add_tail(&notify->qe, &ioc->hb_notify_q);
 }
 
 #define BFA_MFG_NAME "Brocade"
@@ -2257,7 +2217,6 @@ bfa_ioc_recover(struct bfa_ioc *ioc)
 {
 	pr_crit("Heart Beat of IOC has failed\n");
 	bfa_ioc_stats(ioc, ioc_hbfails);
-	bfa_ioc_stats_hb_count(ioc, ioc->hb_count);
 	bfa_fsm_send_event(ioc, IOC_E_HBFAIL);
 }
 

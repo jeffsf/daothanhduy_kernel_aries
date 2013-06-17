@@ -313,18 +313,8 @@ static void atl1e_set_multi(struct net_device *netdev)
 	}
 }
 
-static void __atl1e_vlan_mode(u32 features, u32 *mac_ctrl_data)
-{
-	if (features & NETIF_F_HW_VLAN_RX) {
-		/* enable VLAN tag insert/strip */
-		*mac_ctrl_data |= MAC_CTRL_RMV_VLAN;
-	} else {
-		/* disable VLAN tag insert/strip */
-		*mac_ctrl_data &= ~MAC_CTRL_RMV_VLAN;
-	}
-}
-
-static void atl1e_vlan_mode(struct net_device *netdev, u32 features)
+static void atl1e_vlan_rx_register(struct net_device *netdev,
+				   struct vlan_group *grp)
 {
 	struct atl1e_adapter *adapter = netdev_priv(netdev);
 	u32 mac_ctrl_data = 0;
@@ -332,8 +322,18 @@ static void atl1e_vlan_mode(struct net_device *netdev, u32 features)
 	netdev_dbg(adapter->netdev, "%s\n", __func__);
 
 	atl1e_irq_disable(adapter);
+
+	adapter->vlgrp = grp;
 	mac_ctrl_data = AT_READ_REG(&adapter->hw, REG_MAC_CTRL);
-	__atl1e_vlan_mode(features, &mac_ctrl_data);
+
+	if (grp) {
+		/* enable VLAN tag insert/strip */
+		mac_ctrl_data |= MAC_CTRL_RMV_VLAN;
+	} else {
+		/* disable VLAN tag insert/strip */
+		mac_ctrl_data &= ~MAC_CTRL_RMV_VLAN;
+	}
+
 	AT_WRITE_REG(&adapter->hw, REG_MAC_CTRL, mac_ctrl_data);
 	atl1e_irq_enable(adapter);
 }
@@ -341,9 +341,8 @@ static void atl1e_vlan_mode(struct net_device *netdev, u32 features)
 static void atl1e_restore_vlan(struct atl1e_adapter *adapter)
 {
 	netdev_dbg(adapter->netdev, "%s\n", __func__);
-	atl1e_vlan_mode(adapter->netdev, adapter->netdev->features);
+	atl1e_vlan_rx_register(adapter->netdev, adapter->vlgrp);
 }
-
 /*
  * atl1e_set_mac - Change the Ethernet Address of the NIC
  * @netdev: network interface device structure
@@ -366,30 +365,6 @@ static int atl1e_set_mac_addr(struct net_device *netdev, void *p)
 	memcpy(adapter->hw.mac_addr, addr->sa_data, netdev->addr_len);
 
 	atl1e_hw_set_mac_addr(&adapter->hw);
-
-	return 0;
-}
-
-static u32 atl1e_fix_features(struct net_device *netdev, u32 features)
-{
-	/*
-	 * Since there is no support for separate rx/tx vlan accel
-	 * enable/disable make sure tx flag is always in same state as rx.
-	 */
-	if (features & NETIF_F_HW_VLAN_RX)
-		features |= NETIF_F_HW_VLAN_TX;
-	else
-		features &= ~NETIF_F_HW_VLAN_TX;
-
-	return features;
-}
-
-static int atl1e_set_features(struct net_device *netdev, u32 features)
-{
-	u32 changed = netdev->features ^ features;
-
-	if (changed & NETIF_F_HW_VLAN_RX)
-		atl1e_vlan_mode(netdev, features);
 
 	return 0;
 }
@@ -825,7 +800,8 @@ static int atl1e_setup_ring_resources(struct atl1e_adapter *adapter)
 	/* Init TPD Ring */
 	tx_ring->dma = roundup(adapter->ring_dma, 8);
 	offset = tx_ring->dma - adapter->ring_dma;
-	tx_ring->desc = adapter->ring_vir_addr + offset;
+	tx_ring->desc = (struct atl1e_tpd_desc *)
+			(adapter->ring_vir_addr + offset);
 	size = sizeof(struct atl1e_tx_buffer) * (tx_ring->count);
 	tx_ring->tx_buffer = kzalloc(size, GFP_KERNEL);
 	if (tx_ring->tx_buffer == NULL) {
@@ -851,7 +827,7 @@ static int atl1e_setup_ring_resources(struct atl1e_adapter *adapter)
 
 	/* Init CMB dma address */
 	tx_ring->cmb_dma = adapter->ring_dma + offset;
-	tx_ring->cmb = adapter->ring_vir_addr + offset;
+	tx_ring->cmb     = (u32 *)(adapter->ring_vir_addr + offset);
 	offset += sizeof(u32);
 
 	for (i = 0; i < adapter->num_rx_queues; i++) {
@@ -1064,7 +1040,8 @@ static void atl1e_setup_mac_ctrl(struct atl1e_adapter *adapter)
 	value |= (((u32)adapter->hw.preamble_len &
 		  MAC_CTRL_PRMLEN_MASK) << MAC_CTRL_PRMLEN_SHIFT);
 
-	__atl1e_vlan_mode(netdev->features, &value);
+	if (adapter->vlgrp)
+		value |= MAC_CTRL_RMV_VLAN;
 
 	value |= MAC_CTRL_BC_EN;
 	if (netdev->flags & IFF_PROMISC)
@@ -1447,16 +1424,19 @@ static void atl1e_clean_rx_irq(struct atl1e_adapter *adapter, u8 que,
 			skb->protocol = eth_type_trans(skb, netdev);
 			atl1e_rx_checksum(adapter, skb, prrs);
 
-			if (prrs->pkt_flag & RRS_IS_VLAN_TAG) {
+			if (unlikely(adapter->vlgrp &&
+				(prrs->pkt_flag & RRS_IS_VLAN_TAG))) {
 				u16 vlan_tag = (prrs->vtag >> 4) |
 					       ((prrs->vtag & 7) << 13) |
 					       ((prrs->vtag & 8) << 9);
 				netdev_dbg(netdev,
 					   "RXD VLAN TAG<RRD>=0x%04x\n",
 					   prrs->vtag);
-				__vlan_hwaccel_put_tag(skb, vlan_tag);
+				vlan_hwaccel_receive_skb(skb, adapter->vlgrp,
+							 vlan_tag);
+			} else {
+				netif_receive_skb(skb);
 			}
-			netif_receive_skb(skb);
 
 skip_pkt:
 	/* skip current packet whether it's ok or not. */
@@ -1832,7 +1812,7 @@ static netdev_tx_t atl1e_xmit_frame(struct sk_buff *skb,
 
 	tpd = atl1e_get_tpd(adapter);
 
-	if (vlan_tx_tag_present(skb)) {
+	if (unlikely(vlan_tx_tag_present(skb))) {
 		u16 vlan_tag = vlan_tx_tag_get(skb);
 		u16 atl1e_vlan_tag;
 
@@ -2096,7 +2076,8 @@ static int atl1e_suspend(struct pci_dev *pdev, pm_message_t state)
 				 MAC_CTRL_PRMLEN_MASK) <<
 				 MAC_CTRL_PRMLEN_SHIFT);
 
-		__atl1e_vlan_mode(netdev->features, &mac_ctrl_data);
+		if (adapter->vlgrp)
+			mac_ctrl_data |= MAC_CTRL_RMV_VLAN;
 
 		/* magic packet maybe Broadcast&multicast&Unicast frame */
 		if (wufc & AT_WUFC_MAG)
@@ -2197,11 +2178,10 @@ static const struct net_device_ops atl1e_netdev_ops = {
 	.ndo_set_multicast_list	= atl1e_set_multi,
 	.ndo_validate_addr	= eth_validate_addr,
 	.ndo_set_mac_address	= atl1e_set_mac_addr,
-	.ndo_fix_features	= atl1e_fix_features,
-	.ndo_set_features	= atl1e_set_features,
 	.ndo_change_mtu		= atl1e_change_mtu,
 	.ndo_do_ioctl		= atl1e_ioctl,
 	.ndo_tx_timeout		= atl1e_tx_timeout,
+	.ndo_vlan_rx_register	= atl1e_vlan_rx_register,
 #ifdef CONFIG_NET_POLL_CONTROLLER
 	.ndo_poll_controller	= atl1e_netpoll,
 #endif
@@ -2220,9 +2200,9 @@ static int atl1e_init_netdev(struct net_device *netdev, struct pci_dev *pdev)
 	atl1e_set_ethtool_ops(netdev);
 
 	netdev->hw_features = NETIF_F_SG | NETIF_F_HW_CSUM | NETIF_F_TSO |
-			      NETIF_F_HW_VLAN_RX;
-	netdev->features = netdev->hw_features | NETIF_F_LLTX |
-			   NETIF_F_HW_VLAN_TX;
+		NETIF_F_HW_VLAN_TX;
+	netdev->features = netdev->hw_features |
+		NETIF_F_HW_VLAN_RX | NETIF_F_LLTX;
 
 	return 0;
 }

@@ -17,7 +17,6 @@
 #include <linux/highmem.h>
 #include <linux/kthread.h>
 #include <linux/pagemap.h>
-#include <linux/scatterlist.h>
 #include <linux/slab.h>
 
 #include "netfs.h"

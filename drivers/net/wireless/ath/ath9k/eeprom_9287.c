@@ -14,7 +14,6 @@
  * OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  */
 
-#include <asm/unaligned.h>
 #include "hw.h"
 #include "ar9002_phy.h"
 
@@ -196,11 +195,11 @@ static u32 ath9k_hw_ar9287_get_eeprom(struct ath_hw *ah,
 	case EEP_NFTHRESH_2:
 		return pModal->noiseFloorThreshCh[0];
 	case EEP_MAC_LSW:
-		return get_unaligned_be16(pBase->macAddr);
+		return pBase->macAddr[0] << 8 | pBase->macAddr[1];
 	case EEP_MAC_MID:
-		return get_unaligned_be16(pBase->macAddr + 2);
+		return pBase->macAddr[2] << 8 | pBase->macAddr[3];
 	case EEP_MAC_MSW:
-		return get_unaligned_be16(pBase->macAddr + 4);
+		return pBase->macAddr[4] << 8 | pBase->macAddr[5];
 	case EEP_REG_0:
 		return pBase->regDmn[0];
 	case EEP_REG_1:
@@ -435,7 +434,10 @@ static void ath9k_hw_set_ar9287_power_cal_table(struct ath_hw *ah,
 					(672 << 2) + regChainOffset;
 
 				for (j = 0; j < 32; j++) {
-					reg32 = get_unaligned_le32(&pdadcValues[4 * j]);
+					reg32 = ((pdadcValues[4*j + 0] & 0xFF) << 0)
+						| ((pdadcValues[4*j + 1] & 0xFF) << 8)
+						| ((pdadcValues[4*j + 2] & 0xFF) << 16)
+						| ((pdadcValues[4*j + 3] & 0xFF) << 24);
 
 					REG_WRITE(ah, regOffset, reg32);
 					regOffset += 4;

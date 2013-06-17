@@ -44,7 +44,6 @@
 #include <linux/ioport.h> /* for request_region */
 #include <linux/uio.h>
 #include <linux/init.h>
-#include <linux/interrupt.h>
 #include <linux/capability.h>
 #include <linux/bitops.h>
 #include <linux/slab.h>
@@ -52,7 +51,7 @@
 #include <asm/system.h>
 #include <asm/string.h>
 #include <asm/io.h>
-#include <linux/atomic.h>
+#include <asm/atomic.h>
 #include <asm/uaccess.h>
 #include <linux/wait.h>
 

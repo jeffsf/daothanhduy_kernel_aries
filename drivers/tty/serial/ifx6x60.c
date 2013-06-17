@@ -36,7 +36,6 @@
  *	you need to use this driver for another platform.
  *
  *****************************************************************************/
-#include <linux/dma-mapping.h>
 #include <linux/module.h>
 #include <linux/termios.h>
 #include <linux/tty.h>

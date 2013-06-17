@@ -74,6 +74,7 @@
 #define AT91RM9200_BASE_SSC1	0xfffd4000
 #define AT91RM9200_BASE_SSC2	0xfffd8000
 #define AT91RM9200_BASE_SPI	0xfffe0000
+#define AT91_BASE_SYS		0xfffff000
 
 
 /*

@@ -1,5 +1,5 @@
 /*
- * SPI init/core code
+ * spi.c - SPI init/core code
  *
  * Copyright (C) 2005 David Brownell
  *

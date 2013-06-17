@@ -34,7 +34,7 @@
 
 #include <linux/mm.h>
 #include <linux/pfn.h>
-#include <linux/atomic.h>
+#include <asm/atomic.h>
 #include <mach/dma.h>
 
 /* I don't quite understand why dc4 fails when this is set to 1 and DMA is enabled */
@@ -835,7 +835,7 @@ int dma_init(void)
 
 	/* Create /proc/dma/channels and /proc/dma/devices */
 
-	gDmaDir = proc_mkdir("dma", NULL);
+	gDmaDir = create_proc_entry("dma", S_IFDIR | S_IRUGO | S_IXUGO, NULL);
 
 	if (gDmaDir == NULL) {
 		printk(KERN_ERR "Unable to create /proc/dma\n");

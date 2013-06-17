@@ -307,7 +307,7 @@ int et131x_send_packets(struct sk_buff *skb, struct net_device *netdev)
 		/* We need to see if the link is up; if it's not, make the
 		 * netif layer think we're good and drop the packet
 		 */
-		if ((etdev->flags & fMP_ADAPTER_FAIL_SEND_MASK) ||
+		if ((etdev->Flags & fMP_ADAPTER_FAIL_SEND_MASK) ||
 					!netif_carrier_ok(netdev)) {
 			dev_kfree_skb_any(skb);
 			skb = NULL;
@@ -635,11 +635,11 @@ inline void et131x_free_send_packet(struct et131x_adapter *etdev,
 	struct net_device_stats *stats = &etdev->net_stats;
 
 	if (tcb->flags & fMP_DEST_BROAD)
-		atomic_inc(&etdev->stats.brdcstxmt);
+		atomic_inc(&etdev->Stats.brdcstxmt);
 	else if (tcb->flags & fMP_DEST_MULTI)
-		atomic_inc(&etdev->stats.multixmt);
+		atomic_inc(&etdev->Stats.multixmt);
 	else
-		atomic_inc(&etdev->stats.unixmt);
+		atomic_inc(&etdev->Stats.unixmt);
 
 	if (tcb->skb) {
 		stats->tx_bytes += tcb->skb->len;
@@ -673,7 +673,7 @@ inline void et131x_free_send_packet(struct et131x_adapter *etdev,
 	/* Add the TCB to the Ready Q */
 	spin_lock_irqsave(&etdev->TCBReadyQLock, flags);
 
-	etdev->net_stats.tx_packets++;
+	etdev->Stats.opackets++;
 
 	if (etdev->tx_ring.tcb_qtail)
 		etdev->tx_ring.tcb_qtail->next = tcb;
@@ -747,7 +747,7 @@ void et131x_handle_send_interrupt(struct et131x_adapter *etdev)
 	struct tcb *tcb;
 	u32 index;
 
-	serviced = readl(&etdev->regs->txdma.new_service_complete);
+	serviced = readl(&etdev->regs->txdma.NewServiceComplete);
 	index = INDEX10(serviced);
 
 	/* Has the ring wrapped?  Process any descriptors that do not have

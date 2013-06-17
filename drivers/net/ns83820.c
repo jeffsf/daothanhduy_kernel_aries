@@ -106,7 +106,6 @@
 #include <linux/delay.h>
 #include <linux/workqueue.h>
 #include <linux/init.h>
-#include <linux/interrupt.h>
 #include <linux/ip.h>	/* for iph */
 #include <linux/in.h>	/* for IPPROTO_... */
 #include <linux/compiler.h>
@@ -430,6 +429,10 @@ struct ns83820 {
 	struct pci_dev		*pci_dev;
 	struct net_device	*ndev;
 
+#ifdef NS83820_VLAN_ACCEL_SUPPORT
+	struct vlan_group	*vlgrp;
+#endif
+
 	struct rx_info		rx_info;
 	struct tasklet_struct	rx_tasklet;
 
@@ -489,6 +492,22 @@ static inline void kick_rx(struct net_device *ndev)
 //free = (tx_done_idx + NR_TX_DESC-2 - free_idx) % NR_TX_DESC
 #define start_tx_okay(dev)	\
 	(((NR_TX_DESC-2 + dev->tx_done_idx - dev->tx_free_idx) % NR_TX_DESC) > MIN_TX_DESC_FREE)
+
+
+#ifdef NS83820_VLAN_ACCEL_SUPPORT
+static void ns83820_vlan_rx_register(struct net_device *ndev, struct vlan_group *grp)
+{
+	struct ns83820 *dev = PRIV(ndev);
+
+	spin_lock_irq(&dev->misc_lock);
+	spin_lock(&dev->tx_lock);
+
+	dev->vlgrp = grp;
+
+	spin_unlock(&dev->tx_lock);
+	spin_unlock_irq(&dev->misc_lock);
+}
+#endif
 
 /* Packet Receiver
  *
@@ -910,12 +929,14 @@ static void rx_irq(struct net_device *ndev)
 #ifdef NS83820_VLAN_ACCEL_SUPPORT
 			if(extsts & EXTSTS_VPKT) {
 				unsigned short tag;
-
 				tag = ntohs(extsts & EXTSTS_VTG_MASK);
-				__vlan_hwaccel_put_tag(skb, tag);
+				rx_rc = vlan_hwaccel_rx(skb,dev->vlgrp,tag);
+			} else {
+				rx_rc = netif_rx(skb);
 			}
-#endif
+#else
 			rx_rc = netif_rx(skb);
+#endif
 			if (NET_RX_DROP == rx_rc) {
 netdev_mangle_me_harder_failed:
 				ndev->stats.rx_dropped++;
@@ -1939,8 +1960,11 @@ static const struct net_device_ops netdev_ops = {
 	.ndo_change_mtu		= ns83820_change_mtu,
 	.ndo_set_multicast_list = ns83820_set_multicast,
 	.ndo_validate_addr	= eth_validate_addr,
-	.ndo_set_mac_address	= eth_mac_addr,
+	.ndo_set_mac_address 	= eth_mac_addr,
 	.ndo_tx_timeout		= ns83820_tx_timeout,
+#ifdef NS83820_VLAN_ACCEL_SUPPORT
+	.ndo_vlan_rx_register	= ns83820_vlan_rx_register,
+#endif
 };
 
 static int __devinit ns83820_init_one(struct pci_dev *pci_dev,

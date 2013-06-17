@@ -27,7 +27,6 @@
 #include <linux/kernel.h>
 #include <linux/ethtool.h>
 #include <linux/phy.h>
-#include <linux/ratelimit.h>
 
 #include <net/dst.h>
 
@@ -130,22 +129,22 @@ static void cvm_oct_adjust_link(struct net_device *dev)
 		if (priv->last_link) {
 			netif_carrier_on(dev);
 			if (priv->queue != -1)
-				printk_ratelimited("%s: %u Mbps %s duplex, "
-						   "port %2d, queue %2d\n",
-						   dev->name, priv->phydev->speed,
-						   priv->phydev->duplex ?
-						   "Full" : "Half",
-						   priv->port, priv->queue);
+				DEBUGPRINT("%s: %u Mbps %s duplex, "
+					   "port %2d, queue %2d\n",
+					   dev->name, priv->phydev->speed,
+					   priv->phydev->duplex ?
+						"Full" : "Half",
+					   priv->port, priv->queue);
 			else
-				printk_ratelimited("%s: %u Mbps %s duplex, "
-						   "port %2d, POW\n",
-						   dev->name, priv->phydev->speed,
-						   priv->phydev->duplex ?
-						   "Full" : "Half",
-						   priv->port);
+				DEBUGPRINT("%s: %u Mbps %s duplex, "
+					   "port %2d, POW\n",
+					   dev->name, priv->phydev->speed,
+					   priv->phydev->duplex ?
+						"Full" : "Half",
+					   priv->port);
 		} else {
 			netif_carrier_off(dev);
-			printk_ratelimited("%s: Link down\n", dev->name);
+			DEBUGPRINT("%s: Link down\n", dev->name);
 		}
 	}
 }

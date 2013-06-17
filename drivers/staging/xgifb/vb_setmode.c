@@ -2,6 +2,7 @@
 #include <linux/io.h>
 #include <linux/delay.h>
 #include <linux/types.h>
+#include <linux/version.h>
 #include "XGIfb.h"
 
 

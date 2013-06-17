@@ -1770,4 +1770,3 @@ failed_init:
 module_init(netback_init);
 
 MODULE_LICENSE("Dual BSD/GPL");
-MODULE_ALIAS("xen-backend:vif");

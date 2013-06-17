@@ -18,7 +18,7 @@
 #include <linux/kernel.h>
 #include <linux/string.h>
 #include <linux/errno.h>
-#include <linux/ptrace.h>
+#include <linux/tracehook.h>
 #include <linux/timer.h>
 #include <linux/mm.h>
 #include <linux/smp.h>
@@ -36,16 +36,20 @@
 #include <asm/system.h>
 #include <asm/uaccess.h>
 #include <asm/io.h>
-#include <linux/atomic.h>
+#include <asm/atomic.h>
 #include <asm/mathemu.h>
 #include <asm/cpcmd.h>
 #include <asm/lowcore.h>
 #include <asm/debug.h>
 #include "entry.h"
 
-void (*pgm_check_table[128])(struct pt_regs *, long, unsigned long);
+pgm_check_handler_t *pgm_check_table[128];
 
 int show_unhandled_signals;
+
+extern pgm_check_handler_t do_protection_exception;
+extern pgm_check_handler_t do_dat_exception;
+extern pgm_check_handler_t do_asce_exception;
 
 #define stack_pointer ({ void **sp; asm("la %0,0(15)" : "=&d" (sp)); sp; })
 
@@ -325,17 +329,10 @@ static inline void __user *get_psw_address(struct pt_regs *regs,
 
 void __kprobes do_per_trap(struct pt_regs *regs)
 {
-	siginfo_t info;
-
 	if (notify_die(DIE_SSTEP, "sstep", regs, 0, 0, SIGTRAP) == NOTIFY_STOP)
 		return;
-	if (!current->ptrace)
-		return;
-	info.si_signo = SIGTRAP;
-	info.si_errno = 0;
-	info.si_code = TRAP_HWBKPT;
-	info.si_addr = (void *) current->thread.per_event.address;
-	force_sig_info(SIGTRAP, &info, current);
+	if (tracehook_consider_fatal_signal(current, SIGTRAP))
+		force_sig(SIGTRAP, current);
 }
 
 static void default_trap_handler(struct pt_regs *regs, long pgm_int_code,
@@ -428,13 +425,9 @@ static void __kprobes illegal_op(struct pt_regs *regs, long pgm_int_code,
 		if (get_user(*((__u16 *) opcode), (__u16 __user *) location))
 			return;
 		if (*((__u16 *) opcode) == S390_BREAKPOINT_U16) {
-			if (current->ptrace) {
-				info.si_signo = SIGTRAP;
-				info.si_errno = 0;
-				info.si_code = TRAP_BRKPT;
-				info.si_addr = location;
-				force_sig_info(SIGTRAP, &info, current);
-			} else
+			if (tracehook_consider_fatal_signal(current, SIGTRAP))
+				force_sig(SIGTRAP, current);
+			else
 				signal = SIGILL;
 #ifdef CONFIG_MATHEMU
 		} else if (opcode[0] == 0xb3) {
@@ -496,8 +489,9 @@ static void __kprobes illegal_op(struct pt_regs *regs, long pgm_int_code,
 
 
 #ifdef CONFIG_MATHEMU
-void specification_exception(struct pt_regs *regs, long pgm_int_code,
-			     unsigned long trans_exc_code)
+asmlinkage void specification_exception(struct pt_regs *regs,
+					long pgm_int_code,
+					unsigned long trans_exc_code)
 {
         __u8 opcode[6];
 	__u16 __user *location = NULL;
@@ -654,7 +648,7 @@ static void space_switch_exception(struct pt_regs *regs, long pgm_int_code,
 	do_trap(pgm_int_code, SIGILL, "space switch event", regs, &info);
 }
 
-void __kprobes kernel_stack_overflow(struct pt_regs * regs)
+asmlinkage void __kprobes kernel_stack_overflow(struct pt_regs * regs)
 {
 	bust_spinlocks(1);
 	printk("Kernel stack overflow.\n");

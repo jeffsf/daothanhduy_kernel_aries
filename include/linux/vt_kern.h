@@ -139,7 +139,7 @@ int vty_init(const struct file_operations *console_fops);
 
 static inline bool vt_force_oops_output(struct vc_data *vc)
 {
-	if (oops_in_progress && vc->vc_panic_force_write  && panic_timeout >= 0)
+	if (oops_in_progress && vc->vc_panic_force_write)
 		return true;
 	return false;
 }

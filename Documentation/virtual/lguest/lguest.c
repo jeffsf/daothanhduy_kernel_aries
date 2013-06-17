@@ -51,7 +51,7 @@
 #include <asm/bootparam.h>
 #include "../../../include/linux/lguest_launcher.h"
 /*L:110
- * We can ignore the 43 include files we need for this program, but I do want
+ * We can ignore the 42 include files we need for this program, but I do want
  * to draw attention to the use of kernel-style types.
  *
  * As Linus said, "C is a Spartan language, and so should your naming be."  I
@@ -65,6 +65,7 @@ typedef uint16_t u16;
 typedef uint8_t u8;
 /*:*/
 
+#define PAGE_PRESENT 0x7 	/* Present, RW, Execute */
 #define BRIDGE_PFX "bridge:"
 #ifndef SIOCBRADDIF
 #define SIOCBRADDIF	0x89a2		/* add interface to bridge      */
@@ -860,10 +861,8 @@ static void console_output(struct virtqueue *vq)
 	/* writev can return a partial write, so we loop here. */
 	while (!iov_empty(iov, out)) {
 		int len = writev(STDOUT_FILENO, iov, out);
-		if (len <= 0) {
-			warn("Write to stdout gave %i (%d)", len, errno);
-			break;
-		}
+		if (len <= 0)
+			err(1, "Write to stdout gave %i", len);
 		iov_consume(iov, out, len);
 	}
 
@@ -899,7 +898,7 @@ static void net_output(struct virtqueue *vq)
 	 * same format: what a coincidence!
 	 */
 	if (writev(net_info->tunfd, iov, out) < 0)
-		warnx("Write to tun failed (%d)?", errno);
+		errx(1, "Write to tun failed?");
 
 	/*
 	 * Done with that one; wait_for_vq_desc() will send the interrupt if
@@ -956,7 +955,7 @@ static void net_input(struct virtqueue *vq)
 	 */
 	len = readv(net_info->tunfd, iov, in);
 	if (len <= 0)
-		warn("Failed to read from tun (%d).", errno);
+		err(1, "Failed to read from tun.");
 
 	/*
 	 * Mark that packet buffer as used, but don't interrupt here.  We want
@@ -1094,10 +1093,9 @@ static void update_device_status(struct device *dev)
 		warnx("Device %s configuration FAILED", dev->name);
 		if (dev->running)
 			reset_device(dev);
-	} else {
-		if (dev->running)
-			err(1, "Device %s features finalized twice", dev->name);
-		start_device(dev);
+	} else if (dev->desc->status & VIRTIO_CONFIG_S_DRIVER_OK) {
+		if (!dev->running)
+			start_device(dev);
 	}
 }
 
@@ -1122,11 +1120,25 @@ static void handle_output(unsigned long addr)
 			return;
 		}
 
-		/* Devices should not be used before features are finalized. */
+		/*
+		 * Devices *can* be used before status is set to DRIVER_OK.
+		 * The original plan was that they would never do this: they
+		 * would always finish setting up their status bits before
+		 * actually touching the virtqueues.  In practice, we allowed
+		 * them to, and they do (eg. the disk probes for partition
+		 * tables as part of initialization).
+		 *
+		 * If we see this, we start the device: once it's running, we
+		 * expect the device to catch all the notifications.
+		 */
 		for (vq = i->vq; vq; vq = vq->next) {
 			if (addr != vq->config.pfn*getpagesize())
 				continue;
-			errx(1, "Notification on %s before setup!", i->name);
+			if (i->running)
+				errx(1, "Notification on running %s", i->name);
+			/* This just calls create_thread() for each virtqueue */
+			start_device(i);
+			return;
 		}
 	}
 
@@ -1358,7 +1370,7 @@ static void setup_console(void)
  * --sharenet=<name> option which opens or creates a named pipe.  This can be
  * used to send packets to another guest in a 1:1 manner.
  *
- * More sophisticated is to use one of the tools developed for project like UML
+ * More sopisticated is to use one of the tools developed for project like UML
  * to do networking.
  *
  * Faster is to do virtio bonding in kernel.  Doing this 1:1 would be
@@ -1368,7 +1380,7 @@ static void setup_console(void)
  * multiple inter-guest channels behind one interface, although it would
  * require some manner of hotplugging new virtio channels.
  *
- * Finally, we could use a virtio network switch in the kernel, ie. vhost.
+ * Finally, we could implement a virtio network switch in the kernel.
 :*/
 
 static u32 str2ip(const char *ipaddr)
@@ -2008,7 +2020,10 @@ int main(int argc, char *argv[])
 	/* Tell the entry path not to try to reload segment registers. */
 	boot->hdr.loadflags |= KEEP_SEGMENTS;
 
-	/* We tell the kernel to initialize the Guest. */
+	/*
+	 * We tell the kernel to initialize the Guest: this returns the open
+	 * /dev/lguest file descriptor.
+	 */
 	tell_kernel(start);
 
 	/* Ensure that we terminate if a device-servicing child dies. */

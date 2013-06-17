@@ -28,6 +28,8 @@
 extern "C" {
 #endif
 
+#include <linux/version.h>
+
 /*
  * Host side Test Command support
  */

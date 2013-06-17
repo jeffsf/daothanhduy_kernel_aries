@@ -628,6 +628,7 @@ static void qe_set_multicast(struct net_device *dev)
 	struct sunqe *qep = netdev_priv(dev);
 	struct netdev_hw_addr *ha;
 	u8 new_mconfig = qep->mconfig;
+	char *addrs;
 	int i;
 	u32 crc;
 
@@ -650,7 +651,11 @@ static void qe_set_multicast(struct net_device *dev)
 
 		memset(hash_table, 0, sizeof(hash_table));
 		netdev_for_each_mc_addr(ha, dev) {
-			crc = ether_crc_le(6, ha->addr);
+			addrs = ha->addr;
+
+			if (!(*addrs & 1))
+				continue;
+			crc = ether_crc_le(6, addrs);
 			crc >>= 26;
 			hash_table[crc >> 4] |= 1 << (crc & 0xf);
 		}

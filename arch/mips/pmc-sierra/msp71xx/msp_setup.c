@@ -228,11 +228,13 @@ void __init prom_init(void)
 	 */
 	msp_serial_setup();
 
-	if (register_vsmp_smp_ops()) {
-#ifdef CONFIG_MIPS_MT_SMTC
-		register_smp_ops(&msp_smtc_smp_ops);
+#ifdef CONFIG_MIPS_MT_SMP
+	register_smp_ops(&vsmp_smp_ops);
 #endif
-	}
+
+#ifdef CONFIG_MIPS_MT_SMTC
+	register_smp_ops(&msp_smtc_smp_ops);
+#endif
 
 #ifdef CONFIG_PMCTWILED
 	/*

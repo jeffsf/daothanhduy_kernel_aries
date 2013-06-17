@@ -61,9 +61,9 @@ SCHED_FEAT(LB_BIAS, 1)
 SCHED_FEAT(OWNER_SPIN, 1)
 
 /*
- * Decrement CPU power based on time not spent running tasks
+ * Decrement CPU power based on irq activity
  */
-SCHED_FEAT(NONTASK_POWER, 1)
+SCHED_FEAT(NONIRQ_POWER, 1)
 
 /*
  * Queue remote wakeups on the target CPU and process them

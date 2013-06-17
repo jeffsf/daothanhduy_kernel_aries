@@ -433,10 +433,9 @@ static int snd_usb_audio_create(struct usb_device *dev, int idx,
  * only at the first time.  the successive calls of this function will
  * append the pcm interface to the corresponding card.
  */
-static struct snd_usb_audio *
-snd_usb_audio_probe(struct usb_device *dev,
-		    struct usb_interface *intf,
-		    const struct usb_device_id *usb_id)
+static void *snd_usb_audio_probe(struct usb_device *dev,
+				 struct usb_interface *intf,
+				 const struct usb_device_id *usb_id)
 {
 	const struct snd_usb_audio_quirk *quirk = (const struct snd_usb_audio_quirk *)usb_id->driver_info;
 	int i, err;
@@ -544,15 +543,16 @@ snd_usb_audio_probe(struct usb_device *dev,
  * we need to take care of counter, since disconnection can be called also
  * many times as well as usb_audio_probe().
  */
-static void snd_usb_audio_disconnect(struct usb_device *dev,
-				     struct snd_usb_audio *chip)
+static void snd_usb_audio_disconnect(struct usb_device *dev, void *ptr)
 {
+	struct snd_usb_audio *chip;
 	struct snd_card *card;
 	struct list_head *p;
 
-	if (chip == (void *)-1L)
+	if (ptr == (void *)-1L)
 		return;
 
+	chip = ptr;
 	card = chip->card;
 	down_write(&chip->shutdown_rwsem);
 	chip->shutdown = 1;
@@ -588,7 +588,7 @@ static void snd_usb_audio_disconnect(struct usb_device *dev,
 static int usb_audio_probe(struct usb_interface *intf,
 			   const struct usb_device_id *id)
 {
-	struct snd_usb_audio *chip;
+	void *chip;
 	chip = snd_usb_audio_probe(interface_to_usbdev(intf), intf, id);
 	if (chip) {
 		usb_set_intfdata(intf, chip);

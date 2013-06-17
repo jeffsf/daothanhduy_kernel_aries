@@ -45,6 +45,7 @@
 #include "t3cdev.h"
 #include <asm/io.h>
 
+struct vlan_group;
 struct adapter;
 struct sge_qset;
 struct port_info;
@@ -65,6 +66,7 @@ struct iscsi_config {
 
 struct port_info {
 	struct adapter *adapter;
+	struct vlan_group *vlan_grp;
 	struct sge_qset *qs;
 	u8 port_id;
 	u8 nqsets;

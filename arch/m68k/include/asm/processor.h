@@ -105,6 +105,9 @@ struct thread_struct {
 static inline void start_thread(struct pt_regs * regs, unsigned long pc,
 				unsigned long usp)
 {
+	/* reads from user space */
+	set_fs(USER_DS);
+
 	regs->pc = pc;
 	regs->sr &= ~0x2000;
 	wrusp(usp);
@@ -126,6 +129,7 @@ extern int handle_kernel_fault(struct pt_regs *regs);
 
 #define start_thread(_regs, _pc, _usp)                  \
 do {                                                    \
+	set_fs(USER_DS); /* reads from user space */    \
 	(_regs)->pc = (_pc);                            \
 	((struct switch_stack *)(_regs))[-1].a6 = 0;    \
 	reformat(_regs);                                \

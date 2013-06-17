@@ -96,7 +96,7 @@ static struct sleep_save core_save[] = {
 	SAVE_ITEM(S3C2410_TCNTO(0)),
 };
 
-static int s5pv210_cpu_suspend(unsigned long arg)
+void s5pv210_cpu_suspend(void)
 {
 	unsigned long tmp;
 

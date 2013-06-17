@@ -186,8 +186,8 @@ static int soc_common_pcmcia_sock_init(struct pcmcia_socket *sock)
 	struct soc_pcmcia_socket *skt = to_soc_pcmcia_socket(sock);
 
 	debug(skt, 2, "initializing socket\n");
-	if (skt->ops->socket_init)
-		skt->ops->socket_init(skt);
+
+	skt->ops->socket_init(skt);
 	return 0;
 }
 
@@ -207,8 +207,7 @@ static int soc_common_pcmcia_suspend(struct pcmcia_socket *sock)
 
 	debug(skt, 2, "suspending socket\n");
 
-	if (skt->ops->socket_suspend)
-		skt->ops->socket_suspend(skt);
+	skt->ops->socket_suspend(skt);
 
 	return 0;
 }

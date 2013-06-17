@@ -18,11 +18,6 @@
 
 extern int hest_disable;
 extern int erst_disable;
-#ifdef CONFIG_ACPI_APEI_GHES
-extern int ghes_disable;
-#else
-#define ghes_disable 1
-#endif
 
 #ifdef CONFIG_ACPI_APEI
 void __init acpi_hest_init(void);

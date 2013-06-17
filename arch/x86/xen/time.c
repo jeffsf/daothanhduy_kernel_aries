@@ -168,10 +168,9 @@ cycle_t xen_clocksource_read(void)
         struct pvclock_vcpu_time_info *src;
 	cycle_t ret;
 
-	preempt_disable_notrace();
-	src = &__get_cpu_var(xen_vcpu)->time;
+	src = &get_cpu_var(xen_vcpu)->time;
 	ret = pvclock_clocksource_read(src);
-	preempt_enable_notrace();
+	put_cpu_var(xen_vcpu);
 	return ret;
 }
 

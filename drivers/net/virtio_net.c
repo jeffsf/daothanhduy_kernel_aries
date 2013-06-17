@@ -40,15 +40,6 @@ module_param(gso, bool, 0444);
 
 #define VIRTNET_SEND_COMMAND_SG_MAX    2
 
-struct virtnet_stats {
-	struct u64_stats_sync syncp;
-	u64 tx_bytes;
-	u64 tx_packets;
-
-	u64 rx_bytes;
-	u64 rx_packets;
-};
-
 struct virtnet_info {
 	struct virtio_device *vdev;
 	struct virtqueue *rvq, *svq, *cvq;
@@ -64,9 +55,6 @@ struct virtnet_info {
 
 	/* Host will merge rx buffers for big packets (shake it! shake it!) */
 	bool mergeable_rx_bufs;
-
-	/* Active statistics */
-	struct virtnet_stats __percpu *stats;
 
 	/* Work struct for refilling if we run low on memory. */
 	struct delayed_work refill;
@@ -221,6 +209,7 @@ static int receive_mergeable(struct virtnet_info *vi, struct sk_buff *skb)
 			skb->dev->stats.rx_length_errors++;
 			return -EINVAL;
 		}
+
 		page = virtqueue_get_buf(vi->rvq, &len);
 		if (!page) {
 			pr_debug("%s: rx error: %d buffers missing\n",
@@ -228,7 +217,6 @@ static int receive_mergeable(struct virtnet_info *vi, struct sk_buff *skb)
 			skb->dev->stats.rx_length_errors++;
 			return -EINVAL;
 		}
-
 		if (len > PAGE_SIZE)
 			len = PAGE_SIZE;
 
@@ -242,7 +230,6 @@ static int receive_mergeable(struct virtnet_info *vi, struct sk_buff *skb)
 static void receive_buf(struct net_device *dev, void *buf, unsigned int len)
 {
 	struct virtnet_info *vi = netdev_priv(dev);
-	struct virtnet_stats __percpu *stats = this_cpu_ptr(vi->stats);
 	struct sk_buff *skb;
 	struct page *page;
 	struct skb_vnet_hdr *hdr;
@@ -278,11 +265,8 @@ static void receive_buf(struct net_device *dev, void *buf, unsigned int len)
 
 	hdr = skb_vnet_hdr(skb);
 	skb->truesize += skb->data_len;
-
-	u64_stats_update_begin(&stats->syncp);
-	stats->rx_bytes += skb->len;
-	stats->rx_packets++;
-	u64_stats_update_end(&stats->syncp);
+	dev->stats.rx_bytes += skb->len;
+	dev->stats.rx_packets++;
 
 	if (hdr->hdr.flags & VIRTIO_NET_HDR_F_NEEDS_CSUM) {
 		pr_debug("Needs csum!\n");
@@ -290,8 +274,6 @@ static void receive_buf(struct net_device *dev, void *buf, unsigned int len)
 					  hdr->hdr.csum_start,
 					  hdr->hdr.csum_offset))
 			goto frame_err;
-	} else if (hdr->hdr.flags & VIRTIO_NET_HDR_F_DATA_VALID) {
-		skb->ip_summed = CHECKSUM_UNNECESSARY;
 	}
 
 	skb->protocol = eth_type_trans(skb, dev);
@@ -531,16 +513,11 @@ static unsigned int free_old_xmit_skbs(struct virtnet_info *vi)
 {
 	struct sk_buff *skb;
 	unsigned int len, tot_sgs = 0;
-	struct virtnet_stats __percpu *stats = this_cpu_ptr(vi->stats);
 
 	while ((skb = virtqueue_get_buf(vi->svq, &len)) != NULL) {
 		pr_debug("Sent skb %p\n", skb);
-
-		u64_stats_update_begin(&stats->syncp);
-		stats->tx_bytes += skb->len;
-		stats->tx_packets++;
-		u64_stats_update_end(&stats->syncp);
-
+		vi->dev->stats.tx_bytes += skb->len;
+		vi->dev->stats.tx_packets++;
 		tot_sgs += skb_vnet_hdr(skb)->num_sg;
 		dev_kfree_skb_any(skb);
 	}
@@ -660,40 +637,6 @@ static int virtnet_set_mac_address(struct net_device *dev, void *p)
 		                  dev->dev_addr, dev->addr_len);
 
 	return 0;
-}
-
-static struct rtnl_link_stats64 *virtnet_stats(struct net_device *dev,
-					       struct rtnl_link_stats64 *tot)
-{
-	struct virtnet_info *vi = netdev_priv(dev);
-	int cpu;
-	unsigned int start;
-
-	for_each_possible_cpu(cpu) {
-		struct virtnet_stats __percpu *stats
-			= per_cpu_ptr(vi->stats, cpu);
-		u64 tpackets, tbytes, rpackets, rbytes;
-
-		do {
-			start = u64_stats_fetch_begin(&stats->syncp);
-			tpackets = stats->tx_packets;
-			tbytes   = stats->tx_bytes;
-			rpackets = stats->rx_packets;
-			rbytes   = stats->rx_bytes;
-		} while (u64_stats_fetch_retry(&stats->syncp, start));
-
-		tot->rx_packets += rpackets;
-		tot->tx_packets += tpackets;
-		tot->rx_bytes   += rbytes;
-		tot->tx_bytes   += tbytes;
-	}
-
-	tot->tx_dropped = dev->stats.tx_dropped;
-	tot->rx_dropped = dev->stats.rx_dropped;
-	tot->rx_length_errors = dev->stats.rx_length_errors;
-	tot->rx_frame_errors = dev->stats.rx_frame_errors;
-
-	return tot;
 }
 
 #ifdef CONFIG_NET_POLL_CONTROLLER
@@ -890,7 +833,6 @@ static const struct net_device_ops virtnet_netdev = {
 	.ndo_set_mac_address = virtnet_set_mac_address,
 	.ndo_set_rx_mode     = virtnet_set_rx_mode,
 	.ndo_change_mtu	     = virtnet_change_mtu,
-	.ndo_get_stats64     = virtnet_stats,
 	.ndo_vlan_rx_add_vid = virtnet_vlan_rx_add_vid,
 	.ndo_vlan_rx_kill_vid = virtnet_vlan_rx_kill_vid,
 #ifdef CONFIG_NET_POLL_CONTROLLER
@@ -951,7 +893,6 @@ static int virtnet_probe(struct virtio_device *vdev)
 	/* Set up network device as normal. */
 	dev->netdev_ops = &virtnet_netdev;
 	dev->features = NETIF_F_HIGHDMA;
-
 	SET_ETHTOOL_OPS(dev, &virtnet_ethtool_ops);
 	SET_NETDEV_DEV(dev, &vdev->dev);
 
@@ -996,11 +937,6 @@ static int virtnet_probe(struct virtio_device *vdev)
 	vi->vdev = vdev;
 	vdev->priv = vi;
 	vi->pages = NULL;
-	vi->stats = alloc_percpu(struct virtnet_stats);
-	err = -ENOMEM;
-	if (vi->stats == NULL)
-		goto free;
-
 	INIT_DELAYED_WORK(&vi->refill, refill_work);
 	sg_init_table(vi->rx_sg, ARRAY_SIZE(vi->rx_sg));
 	sg_init_table(vi->tx_sg, ARRAY_SIZE(vi->tx_sg));
@@ -1020,7 +956,7 @@ static int virtnet_probe(struct virtio_device *vdev)
 
 	err = vdev->config->find_vqs(vdev, nvqs, vqs, callbacks, names);
 	if (err)
-		goto free_stats;
+		goto free;
 
 	vi->rvq = vqs[0];
 	vi->svq = vqs[1];
@@ -1065,8 +1001,6 @@ unregister:
 	cancel_delayed_work_sync(&vi->refill);
 free_vqs:
 	vdev->config->del_vqs(vdev);
-free_stats:
-	free_percpu(vi->stats);
 free:
 	free_netdev(dev);
 	return err;
@@ -1113,7 +1047,6 @@ static void __devexit virtnet_remove(struct virtio_device *vdev)
 	while (vi->pages)
 		__free_pages(get_a_page(vi, GFP_KERNEL), 0);
 
-	free_percpu(vi->stats);
 	free_netdev(vi->dev);
 }
 

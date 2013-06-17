@@ -23,9 +23,7 @@
 
 #include <linux/device.h>
 #include <linux/uio.h>
-#include <linux/dma-direction.h>
-
-struct scatterlist;
+#include <linux/dma-mapping.h>
 
 /**
  * typedef dma_cookie_t - an opaque DMA cookie

@@ -836,7 +836,8 @@ void __init mem_init(void)
 #endif
 
 #ifdef CONFIG_FLATMEM
-	BUG_ON(!mem_map);
+	if (!mem_map)
+		BUG();
 #endif
 
 #ifdef CONFIG_HIGHMEM

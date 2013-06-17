@@ -21,6 +21,7 @@
 #include <linux/semaphore.h>
 #include <linux/list.h>
 #include <linux/notifier.h>
+#include <linux/workqueue.h>
 #include <linux/platform_device.h>
 #include "nvec.h"
 

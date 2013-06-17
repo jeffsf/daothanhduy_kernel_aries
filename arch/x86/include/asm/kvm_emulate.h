@@ -232,6 +232,37 @@ struct read_cache {
 	unsigned long end;
 };
 
+struct decode_cache {
+	u8 twobyte;
+	u8 b;
+	u8 intercept;
+	u8 lock_prefix;
+	u8 rep_prefix;
+	u8 op_bytes;
+	u8 ad_bytes;
+	u8 rex_prefix;
+	struct operand src;
+	struct operand src2;
+	struct operand dst;
+	bool has_seg_override;
+	u8 seg_override;
+	unsigned int d;
+	int (*execute)(struct x86_emulate_ctxt *ctxt);
+	int (*check_perm)(struct x86_emulate_ctxt *ctxt);
+	unsigned long regs[NR_VCPU_REGS];
+	unsigned long eip;
+	/* modrm */
+	u8 modrm;
+	u8 modrm_mod;
+	u8 modrm_reg;
+	u8 modrm_rm;
+	u8 modrm_seg;
+	bool rip_relative;
+	struct fetch_cache fetch;
+	struct read_cache io_read;
+	struct read_cache mem_read;
+};
+
 struct x86_emulate_ctxt {
 	struct x86_emulate_ops *ops;
 
@@ -252,35 +283,7 @@ struct x86_emulate_ctxt {
 	struct x86_exception exception;
 
 	/* decode cache */
-	u8 twobyte;
-	u8 b;
-	u8 intercept;
-	u8 lock_prefix;
-	u8 rep_prefix;
-	u8 op_bytes;
-	u8 ad_bytes;
-	u8 rex_prefix;
-	struct operand src;
-	struct operand src2;
-	struct operand dst;
-	bool has_seg_override;
-	u8 seg_override;
-	unsigned int d;
-	int (*execute)(struct x86_emulate_ctxt *ctxt);
-	int (*check_perm)(struct x86_emulate_ctxt *ctxt);
-	/* modrm */
-	u8 modrm;
-	u8 modrm_mod;
-	u8 modrm_reg;
-	u8 modrm_rm;
-	u8 modrm_seg;
-	bool rip_relative;
-	unsigned long _eip;
-	/* Fields above regs are cleared together. */
-	unsigned long regs[NR_VCPU_REGS];
-	struct fetch_cache fetch;
-	struct read_cache io_read;
-	struct read_cache mem_read;
+	struct decode_cache decode;
 };
 
 /* Repeat String Operation Prefix */
@@ -386,5 +389,6 @@ int x86_emulate_insn(struct x86_emulate_ctxt *ctxt);
 int emulator_task_switch(struct x86_emulate_ctxt *ctxt,
 			 u16 tss_selector, int reason,
 			 bool has_error_code, u32 error_code);
-int emulate_int_real(struct x86_emulate_ctxt *ctxt, int irq);
+int emulate_int_real(struct x86_emulate_ctxt *ctxt,
+		     struct x86_emulate_ops *ops, int irq);
 #endif /* _ASM_X86_KVM_X86_EMULATE_H */

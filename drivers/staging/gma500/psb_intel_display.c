@@ -1,5 +1,5 @@
 /*
- * Copyright Â© 2006-2011 Intel Corporation
+ * Copyright Â© 2006-2007 Intel Corporation
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -22,14 +22,13 @@
 #include <linux/pm_runtime.h>
 
 #include <drm/drmP.h>
-#include "framebuffer.h"
+#include "psb_fb.h"
 #include "psb_drv.h"
 #include "psb_intel_drv.h"
 #include "psb_intel_reg.h"
 #include "psb_intel_display.h"
-#include "power.h"
+#include "psb_powermgmt.h"
 
-#include "mdfld_output.h"
 
 struct psb_intel_clock_t {
 	/* given values */
@@ -332,7 +331,7 @@ static bool psb_intel_find_best_PLL(struct drm_crtc *crtc, int target,
 void psb_intel_wait_for_vblank(struct drm_device *dev)
 {
 	/* Wait for 20ms, i.e. one cycle at 50hz. */
-	mdelay(20);
+	udelay(20000);
 }
 
 int psb_intel_pipe_set_base(struct drm_crtc *crtc,
@@ -351,14 +350,16 @@ int psb_intel_pipe_set_base(struct drm_crtc *crtc,
 	u32 dspcntr;
 	int ret = 0;
 
-	if (!gma_power_begin(dev, true))
-		return 0;
+	PSB_DEBUG_ENTRY("\n");
 
 	/* no fb bound */
 	if (!crtc->fb) {
-		dev_dbg(dev->dev, "No FB bound\n");
-		goto psb_intel_pipe_cleaner;
+		DRM_DEBUG("No FB bound\n");
+		return 0;
 	}
+
+	if (!gma_power_begin(dev, true))
+		return 0;
 
 	/* We are displaying this buffer, make sure it is actually loaded
 	   into the GTT */
@@ -389,7 +390,7 @@ int psb_intel_pipe_set_base(struct drm_crtc *crtc,
 		dspcntr |= DISPPLANE_32BPP_NO_ALPHA;
 		break;
 	default:
-		dev_err(dev->dev, "Unknown color depth\n");
+		DRM_ERROR("Unknown color depth\n");
 		ret = -EINVAL;
 		psb_gtt_unpin(psbfb->gtt);
 		goto psb_intel_pipe_set_base_exit;
@@ -397,6 +398,7 @@ int psb_intel_pipe_set_base(struct drm_crtc *crtc,
 	REG_WRITE(dspcntr_reg, dspcntr);
 
 
+	DRM_DEBUG("Writing base %08lX %08lX %d %d\n", start, offset, x, y);
 	if (0 /* FIXMEAC - check what PSB needs */) {
 		REG_WRITE(dspbase, offset);
 		REG_READ(dspbase);
@@ -407,7 +409,6 @@ int psb_intel_pipe_set_base(struct drm_crtc *crtc,
 		REG_READ(dspbase);
 	}
 
-psb_intel_pipe_cleaner:
 	/* If there was a previous display we can now unpin it */
 	if (old_fb)
 		psb_gtt_unpin(to_psb_fb(old_fb)->gtt);
@@ -587,7 +588,6 @@ static int psb_intel_crtc_mode_set(struct drm_crtc *crtc,
 {
 	struct drm_device *dev = crtc->dev;
 	struct psb_intel_crtc *psb_intel_crtc = to_psb_intel_crtc(crtc);
-	struct drm_crtc_helper_funcs *crtc_funcs = crtc->helper_private;
 	int pipe = psb_intel_crtc->pipe;
 	int fp_reg = (pipe == 0) ? FPA0 : FPB0;
 	int dpll_reg = (pipe == 0) ? DPLL_A : DPLL_B;
@@ -609,12 +609,6 @@ static int psb_intel_crtc_mode_set(struct drm_crtc *crtc,
 	bool is_crt = false, is_lvds = false, is_tv = false;
 	struct drm_mode_config *mode_config = &dev->mode_config;
 	struct drm_connector *connector;
-
-	/* No scan out no play */
-	if (crtc->fb == NULL) {
-		crtc_funcs->mode_set_base(crtc, x, y, old_fb);
-		return 0;
-	}
 
 	list_for_each_entry(connector, &mode_config->connector_list, head) {
 		struct psb_intel_output *psb_intel_output =
@@ -648,7 +642,7 @@ static int psb_intel_crtc_mode_set(struct drm_crtc *crtc,
 	ok = psb_intel_find_best_PLL(crtc, adjusted_mode->clock, refclk,
 				 &clock);
 	if (!ok) {
-		dev_err(dev->dev, "Couldn't find PLL settings for mode!\n");
+		DRM_ERROR("Couldn't find PLL settings for mode!\n");
 		return 0;
 	}
 
@@ -712,6 +706,7 @@ static int psb_intel_crtc_mode_set(struct drm_crtc *crtc,
 	if (psb_intel_panel_fitter_pipe(dev) == pipe)
 		REG_WRITE(PFIT_CONTROL, 0);
 
+	DRM_DEBUG("Mode for pipe %c:\n", pipe == 0 ? 'A' : 'B');
 	drm_mode_debug_printmodeline(mode);
 
 	if (dpll & DPLL_VCO_ENABLE) {
@@ -728,18 +723,17 @@ static int psb_intel_crtc_mode_set(struct drm_crtc *crtc,
 	if (is_lvds) {
 		u32 lvds = REG_READ(LVDS);
 
-		lvds &= ~LVDS_PIPEB_SELECT;
-		if (pipe == 1)
-			lvds |= LVDS_PIPEB_SELECT;
-
-		lvds |= LVDS_PORT_EN | LVDS_A0A2_CLKA_POWER_UP;
+		lvds |=
+		    LVDS_PORT_EN | LVDS_A0A2_CLKA_POWER_UP |
+		    LVDS_PIPEB_SELECT;
 		/* Set the B0-B3 data pairs corresponding to
 		 * whether we're going to
 		 * set the DPLLs for dual-channel mode or not.
 		 */
-		lvds &= ~(LVDS_B0B3_POWER_UP | LVDS_CLKB_POWER_UP);
 		if (clock.p2 == 7)
 			lvds |= LVDS_B0B3_POWER_UP | LVDS_CLKB_POWER_UP;
+		else
+			lvds &= ~(LVDS_B0B3_POWER_UP | LVDS_CLKB_POWER_UP);
 
 		/* It would be nice to set 24 vs 18-bit mode (LVDS_A3_POWER_UP)
 		 * appropriately here, but we need to look more
@@ -791,7 +785,11 @@ static int psb_intel_crtc_mode_set(struct drm_crtc *crtc,
 	REG_WRITE(dspcntr_reg, dspcntr);
 
 	/* Flush the plane changes */
-	crtc_funcs->mode_set_base(crtc, x, y, old_fb);
+	{
+		struct drm_crtc_helper_funcs *crtc_funcs =
+		    crtc->helper_private;
+		crtc_funcs->mode_set_base(crtc, x, y, old_fb);
+	}
 
 	psb_intel_wait_for_vblank(dev);
 
@@ -822,7 +820,7 @@ void psb_intel_crtc_load_lut(struct drm_crtc *crtc)
 		palreg = PALETTE_C;
 		break;
 	default:
-		dev_err(dev->dev, "Illegal Pipe Number.\n");
+		DRM_ERROR("Illegal Pipe Number.\n");
 		return;
 	}
 
@@ -865,8 +863,10 @@ static void psb_intel_crtc_save(struct drm_crtc *crtc)
 	uint32_t paletteReg;
 	int i;
 
+	DRM_DEBUG("\n");
+
 	if (!crtc_state) {
-		dev_err(dev->dev, "No CRTC state found\n");
+		DRM_DEBUG("No CRTC state found\n");
 		return;
 	}
 
@@ -890,6 +890,25 @@ static void psb_intel_crtc_save(struct drm_crtc *crtc)
 
 	crtc_state->saveDSPBASE = REG_READ(pipeA ? DSPABASE : DSPBBASE);
 
+	DRM_DEBUG("(%x %x %x %x %x %x %x %x %x %x %x %x %x %x %x %x)\n",
+			crtc_state->saveDSPCNTR,
+			crtc_state->savePIPECONF,
+			crtc_state->savePIPESRC,
+			crtc_state->saveFP0,
+			crtc_state->saveFP1,
+			crtc_state->saveDPLL,
+			crtc_state->saveHTOTAL,
+			crtc_state->saveHBLANK,
+			crtc_state->saveHSYNC,
+			crtc_state->saveVTOTAL,
+			crtc_state->saveVBLANK,
+			crtc_state->saveVSYNC,
+			crtc_state->saveDSPSTRIDE,
+			crtc_state->saveDSPSIZE,
+			crtc_state->saveDSPPOS,
+			crtc_state->saveDSPBASE
+		);
+
 	paletteReg = pipeA ? PALETTE_A : PALETTE_B;
 	for (i = 0; i < 256; ++i)
 		crtc_state->savePalette[i] = REG_READ(paletteReg + (i << 2));
@@ -910,15 +929,60 @@ static void psb_intel_crtc_restore(struct drm_crtc *crtc)
 	uint32_t paletteReg;
 	int i;
 
+	DRM_DEBUG("\n");
+
 	if (!crtc_state) {
-		dev_err(dev->dev, "No crtc state\n");
+		DRM_DEBUG("No crtc state\n");
 		return;
 	}
+
+	DRM_DEBUG(
+		"current:(%x %x %x %x %x %x %x %x %x %x %x %x %x %x %x %x)\n",
+		REG_READ(pipeA ? DSPACNTR : DSPBCNTR),
+		REG_READ(pipeA ? PIPEACONF : PIPEBCONF),
+		REG_READ(pipeA ? PIPEASRC : PIPEBSRC),
+		REG_READ(pipeA ? FPA0 : FPB0),
+		REG_READ(pipeA ? FPA1 : FPB1),
+		REG_READ(pipeA ? DPLL_A : DPLL_B),
+		REG_READ(pipeA ? HTOTAL_A : HTOTAL_B),
+		REG_READ(pipeA ? HBLANK_A : HBLANK_B),
+		REG_READ(pipeA ? HSYNC_A : HSYNC_B),
+		REG_READ(pipeA ? VTOTAL_A : VTOTAL_B),
+		REG_READ(pipeA ? VBLANK_A : VBLANK_B),
+		REG_READ(pipeA ? VSYNC_A : VSYNC_B),
+		REG_READ(pipeA ? DSPASTRIDE : DSPBSTRIDE),
+		REG_READ(pipeA ? DSPASIZE : DSPBSIZE),
+		REG_READ(pipeA ? DSPAPOS : DSPBPOS),
+		REG_READ(pipeA ? DSPABASE : DSPBBASE)
+		);
+
+	DRM_DEBUG(
+		"saved: (%x %x %x %x %x %x %x %x %x %x %x %x %x %x %x %x)\n",
+		crtc_state->saveDSPCNTR,
+		crtc_state->savePIPECONF,
+		crtc_state->savePIPESRC,
+		crtc_state->saveFP0,
+		crtc_state->saveFP1,
+		crtc_state->saveDPLL,
+		crtc_state->saveHTOTAL,
+		crtc_state->saveHBLANK,
+		crtc_state->saveHSYNC,
+		crtc_state->saveVTOTAL,
+		crtc_state->saveVBLANK,
+		crtc_state->saveVSYNC,
+		crtc_state->saveDSPSTRIDE,
+		crtc_state->saveDSPSIZE,
+		crtc_state->saveDSPPOS,
+		crtc_state->saveDSPBASE
+		);
+
 
 	if (crtc_state->saveDPLL & DPLL_VCO_ENABLE) {
 		REG_WRITE(pipeA ? DPLL_A : DPLL_B,
 			crtc_state->saveDPLL & ~DPLL_VCO_ENABLE);
 		REG_READ(pipeA ? DPLL_A : DPLL_B);
+		DRM_DEBUG("write dpll: %x\n",
+				REG_READ(pipeA ? DPLL_A : DPLL_B));
 		udelay(150);
 	}
 
@@ -975,8 +1039,11 @@ static int psb_intel_crtc_cursor_set(struct drm_crtc *crtc,
 	struct drm_gem_object *obj;
 	int ret;
 
+	DRM_DEBUG("\n");
+
 	/* if we want to turn of the cursor ignore width and height */
 	if (!handle) {
+		DRM_DEBUG("cursor off\n");
 		/* turn off the cursor */
 		temp = CURSOR_MODE_DISABLE;
 
@@ -1000,7 +1067,7 @@ static int psb_intel_crtc_cursor_set(struct drm_crtc *crtc,
 
 	/* Currently we only support 64x64 cursors */
 	if (width != 64 || height != 64) {
-		dev_dbg(dev->dev, "we currently only support 64x64 cursors\n");
+		DRM_ERROR("we currently only support 64x64 cursors\n");
 		return -EINVAL;
 	}
 
@@ -1009,7 +1076,7 @@ static int psb_intel_crtc_cursor_set(struct drm_crtc *crtc,
 		return -ENOENT;
 
 	if (obj->size < width * height * 4) {
-		dev_dbg(dev->dev, "buffer is to small\n");
+		DRM_ERROR("buffer is to small\n");
 		return -ENOMEM;
 	}
 
@@ -1018,7 +1085,7 @@ static int psb_intel_crtc_cursor_set(struct drm_crtc *crtc,
 	/* Pin the memory into the GTT */
 	ret = psb_gtt_pin(gt);
 	if (ret) {
-		dev_err(dev->dev, "Can not pin down handle 0x%x\n", handle);
+		DRM_ERROR("Can not pin down handle 0x%x\n", handle);
 		return ret;
 	}
 
@@ -1039,13 +1106,14 @@ static int psb_intel_crtc_cursor_set(struct drm_crtc *crtc,
 	}
 
 	/* unpin the old bo */
-	if (psb_intel_crtc->cursor_obj) {
+	if (psb_intel_crtc->cursor_obj && psb_intel_crtc->cursor_obj != obj) {
 		gt = container_of(psb_intel_crtc->cursor_obj,
 							struct gtt_range, gem);
 		psb_gtt_unpin(gt);
 		drm_gem_object_unreference(psb_intel_crtc->cursor_obj);
 		psb_intel_crtc->cursor_obj = obj;
 	}
+
 	return 0;
 }
 
@@ -1080,7 +1148,7 @@ static int psb_intel_crtc_cursor_move(struct drm_crtc *crtc, int x, int y)
 	return 0;
 }
 
-void psb_intel_crtc_gamma_set(struct drm_crtc *crtc, u16 *red,
+static void psb_intel_crtc_gamma_set(struct drm_crtc *crtc, u16 *red,
 			 u16 *green, u16 *blue, uint32_t type, uint32_t size)
 {
 	struct psb_intel_crtc *psb_intel_crtc = to_psb_intel_crtc(crtc);
@@ -1241,7 +1309,7 @@ struct drm_display_mode *psb_intel_crtc_mode_get(struct drm_device *dev,
 	return mode;
 }
 
-void psb_intel_crtc_destroy(struct drm_crtc *crtc)
+static void psb_intel_crtc_destroy(struct drm_crtc *crtc)
 {
 	struct psb_intel_crtc *psb_intel_crtc = to_psb_intel_crtc(crtc);
 	struct gtt_range *gt;
@@ -1259,7 +1327,7 @@ void psb_intel_crtc_destroy(struct drm_crtc *crtc)
 	kfree(psb_intel_crtc);
 }
 
-const struct drm_crtc_helper_funcs psb_intel_helper_funcs = {
+static const struct drm_crtc_helper_funcs psb_intel_helper_funcs = {
 	.dpms = psb_intel_crtc_dpms,
 	.mode_fixup = psb_intel_crtc_mode_fixup,
 	.mode_set = psb_intel_crtc_mode_set,
@@ -1278,19 +1346,6 @@ const struct drm_crtc_funcs psb_intel_crtc_funcs = {
 	.destroy = psb_intel_crtc_destroy,
 };
 
-/*
- * Set the default value of cursor control and base register
- * to zero. This is a workaround for h/w defect on Oaktrail
- */
-static void psb_intel_cursor_init(struct drm_device *dev, int pipe)
-{
-	u32 control[3] = { CURACNTR, CURBCNTR, CURCCNTR };
-	u32 base[3] = { CURABASE, CURBBASE, CURCBASE };
-
-	REG_WRITE(control[pipe], 0);
-	REG_WRITE(base[pipe], 0);
-}
-
 void psb_intel_crtc_init(struct drm_device *dev, int pipe,
 		     struct psb_intel_mode_device *mode_dev)
 {
@@ -1298,6 +1353,8 @@ void psb_intel_crtc_init(struct drm_device *dev, int pipe,
 	struct psb_intel_crtc *psb_intel_crtc;
 	int i;
 	uint16_t *r_base, *g_base, *b_base;
+
+	PSB_DEBUG_ENTRY("\n");
 
 	/* We allocate a extra array of drm_connector pointers
 	 * for fbdev after the crtc */
@@ -1311,13 +1368,12 @@ void psb_intel_crtc_init(struct drm_device *dev, int pipe,
 	psb_intel_crtc->crtc_state =
 		kzalloc(sizeof(struct psb_intel_crtc_state), GFP_KERNEL);
 	if (!psb_intel_crtc->crtc_state) {
-		dev_err(dev->dev, "Crtc state error: No memory\n");
+		DRM_INFO("Crtc state error: No memory\n");
 		kfree(psb_intel_crtc);
 		return;
 	}
 
-	/* Set the CRTC operations from the chip specific data */
-	drm_crtc_init(dev, &psb_intel_crtc->base, dev_priv->ops->crtc_funcs);
+	drm_crtc_init(dev, &psb_intel_crtc->base, &psb_intel_crtc_funcs);
 
 	drm_mode_crtc_set_gamma_size(&psb_intel_crtc->base, 256);
 	psb_intel_crtc->pipe = pipe;
@@ -1340,8 +1396,12 @@ void psb_intel_crtc_init(struct drm_device *dev, int pipe,
 	psb_intel_crtc->mode_dev = mode_dev;
 	psb_intel_crtc->cursor_addr = 0;
 
-	drm_crtc_helper_add(&psb_intel_crtc->base,
-						dev_priv->ops->crtc_helper);
+	if (IS_MRST(dev))
+		drm_crtc_helper_add(&psb_intel_crtc->base,
+				    &mrst_helper_funcs);
+	else
+		drm_crtc_helper_add(&psb_intel_crtc->base,
+				    &psb_intel_helper_funcs);
 
 	/* Setup the array of drm_connector pointer array */
 	psb_intel_crtc->mode_set.crtc = &psb_intel_crtc->base;
@@ -1354,7 +1414,6 @@ void psb_intel_crtc_init(struct drm_device *dev, int pipe,
 	psb_intel_crtc->mode_set.connectors =
 	    (struct drm_connector **) (psb_intel_crtc + 1);
 	psb_intel_crtc->mode_set.num_connectors = 0;
-	psb_intel_cursor_init(dev, pipe);
 }
 
 int psb_intel_get_pipe_from_crtc_id(struct drm_device *dev, void *data,
@@ -1366,7 +1425,7 @@ int psb_intel_get_pipe_from_crtc_id(struct drm_device *dev, void *data,
 	struct psb_intel_crtc *crtc;
 
 	if (!dev_priv) {
-		dev_err(dev->dev, "called with no initialization\n");
+		DRM_ERROR("called with no initialization\n");
 		return -EINVAL;
 	}
 
@@ -1374,7 +1433,7 @@ int psb_intel_get_pipe_from_crtc_id(struct drm_device *dev, void *data,
 			DRM_MODE_OBJECT_CRTC);
 
 	if (!drmmode_obj) {
-		dev_err(dev->dev, "no such CRTC id\n");
+		DRM_ERROR("no such CRTC id\n");
 		return -EINVAL;
 	}
 

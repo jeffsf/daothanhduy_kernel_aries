@@ -681,6 +681,7 @@ static void sis_fixup(struct pci_dev *pdev, struct sis_chipset *sis)
 
 static int sis_init_one (struct pci_dev *pdev, const struct pci_device_id *ent)
 {
+	static int printed_version;
 	const struct ata_port_info *ppi[] = { NULL, NULL };
 	struct pci_dev *host = NULL;
 	struct sis_chipset *chipset = NULL;
@@ -734,7 +735,9 @@ static int sis_init_one (struct pci_dev *pdev, const struct pci_device_id *ent)
 		0x0, &sis_info100
 	};
 
-	ata_print_version_once(&pdev->dev, DRV_VERSION);
+	if (!printed_version++)
+		dev_printk(KERN_DEBUG, &pdev->dev,
+			   "version " DRV_VERSION "\n");
 
 	rc = pcim_enable_device(pdev);
 	if (rc)

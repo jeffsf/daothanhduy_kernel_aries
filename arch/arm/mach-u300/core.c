@@ -1791,7 +1791,7 @@ static void __init u300_assign_physmem(void)
 				     0 == res->start) {
 				res->start  = curr_start;
 				res->end   += curr_start;
-				curr_start += resource_size(res);
+				curr_start += (res->end - res->start + 1);
 
 				printk(KERN_INFO "core.c: Mapping RAM " \
 				       "%#x-%#x to device %s:%s\n",

@@ -1,3 +1,4 @@
+#include <linux/version.h>
 #include <linux/io.h>
 #include <linux/types.h>
 #include "XGIfb.h"

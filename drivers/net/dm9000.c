@@ -24,7 +24,6 @@
 #include <linux/netdevice.h>
 #include <linux/etherdevice.h>
 #include <linux/init.h>
-#include <linux/interrupt.h>
 #include <linux/skbuff.h>
 #include <linux/spinlock.h>
 #include <linux/crc32.h>
@@ -535,9 +534,12 @@ static int dm9000_set_eeprom(struct net_device *dev,
 	board_info_t *dm = to_dm9000_board(dev);
 	int offset = ee->offset;
 	int len = ee->len;
-	int done;
+	int i;
 
 	/* EEPROM access is aligned to two bytes */
+
+	if ((len & 1) != 0 || (offset & 1) != 0)
+		return -EINVAL;
 
 	if (dm->flags & DM9000_PLATF_NO_EEPROM)
 		return -ENOENT;
@@ -545,25 +547,8 @@ static int dm9000_set_eeprom(struct net_device *dev,
 	if (ee->magic != DM_EEPROM_MAGIC)
 		return -EINVAL;
 
-	while (len > 0) {
-		if (len & 1 || offset & 1) {
-			int which = offset & 1;
-			u8 tmp[2];
-
-			dm9000_read_eeprom(dm, offset / 2, tmp);
-			tmp[which] = *data;
-			dm9000_write_eeprom(dm, offset / 2, tmp);
-
-			done = 1;
-		} else {
-			dm9000_write_eeprom(dm, offset / 2, data);
-			done = 2;
-		}
-
-		data += done;
-		offset += done;
-		len -= done;
-	}
+	for (i = 0; i < len; i += 2)
+		dm9000_write_eeprom(dm, (offset + i) / 2, data + i);
 
 	return 0;
 }

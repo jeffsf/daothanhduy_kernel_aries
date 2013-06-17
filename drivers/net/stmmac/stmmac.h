@@ -20,7 +20,7 @@
   Author: Giuseppe Cavallaro <peppe.cavallaro@st.com>
 *******************************************************************************/
 
-#define DRV_MODULE_VERSION	"July_2011"
+#define DRV_MODULE_VERSION	"Nov_2010"
 #include <linux/stmmac.h>
 
 #include "common.h"
@@ -56,9 +56,14 @@ struct stmmac_priv {
 	struct stmmac_extra_stats xstats;
 	struct napi_struct napi;
 
+	phy_interface_t phy_interface;
+	int phy_addr;
+	int phy_mask;
+	int (*phy_reset) (void *priv);
 	int rx_coe;
 	int no_csum_insertion;
 
+	int phy_irq;
 	struct phy_device *phydev;
 	int oldlink;
 	int speed;
@@ -66,7 +71,6 @@ struct stmmac_priv {
 	unsigned int flow_ctrl;
 	unsigned int pause;
 	struct mii_bus *mii;
-	int mii_irq[PHY_MAX_ADDR];
 
 	u32 msg_enable;
 	spinlock_t lock;
@@ -74,6 +78,9 @@ struct stmmac_priv {
 	int wolenabled;
 #ifdef CONFIG_STMMAC_TIMER
 	struct stmmac_timer *tm;
+#endif
+#ifdef STMMAC_VLAN_TAG_USED
+	struct vlan_group *vlgrp;
 #endif
 	struct plat_stmmacenet_data *plat;
 };

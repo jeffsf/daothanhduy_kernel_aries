@@ -14,7 +14,6 @@
  * OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  */
 
-#include <linux/dma-mapping.h>
 #include "ath9k.h"
 
 #define FUDGE 2
@@ -362,7 +361,6 @@ void ath_beacon_tasklet(unsigned long data)
 	struct ath_common *common = ath9k_hw_common(ah);
 	struct ath_buf *bf = NULL;
 	struct ieee80211_vif *vif;
-	struct ath_tx_status ts;
 	int slot;
 	u32 bfaddr, bc = 0;
 
@@ -387,9 +385,7 @@ void ath_beacon_tasklet(unsigned long data)
 			ath_dbg(common, ATH_DBG_BSTUCK,
 				"beacon is officially stuck\n");
 			sc->sc_flags |= SC_OP_TSF_RESET;
-			spin_lock(&sc->sc_pcu_lock);
 			ath_reset(sc, true);
-			spin_unlock(&sc->sc_pcu_lock);
 		}
 
 		return;
@@ -469,11 +465,6 @@ void ath_beacon_tasklet(unsigned long data)
 		ath9k_hw_txstart(ah, sc->beacon.beaconq);
 
 		sc->beacon.ast_be_xmit += bc;     /* XXX per-vif? */
-		if (ah->caps.hw_caps & ATH9K_HW_CAP_EDMA) {
-			spin_lock_bh(&sc->sc_pcu_lock);
-			ath9k_hw_txprocdesc(ah, bf->bf_desc, (void *)&ts);
-			spin_unlock_bh(&sc->sc_pcu_lock);
-		}
 	}
 }
 
@@ -506,7 +497,7 @@ static void ath_beacon_config_ap(struct ath_softc *sc,
 	u32 nexttbtt, intval;
 
 	/* NB: the beacon interval is kept internally in TU's */
-	intval = TU_TO_USEC(conf->beacon_interval);
+	intval = TU_TO_USEC(conf->beacon_interval & ATH9K_BEACON_PERIOD);
 	intval /= ATH_BCBUF;    /* for staggered beacons */
 	nexttbtt = intval;
 
@@ -553,7 +544,7 @@ static void ath_beacon_config_sta(struct ath_softc *sc,
 	}
 
 	memset(&bs, 0, sizeof(bs));
-	intval = conf->beacon_interval;
+	intval = conf->beacon_interval & ATH9K_BEACON_PERIOD;
 
 	/*
 	 * Setup dtim and cfp parameters according to
@@ -662,13 +653,22 @@ static void ath_beacon_config_adhoc(struct ath_softc *sc,
 {
 	struct ath_hw *ah = sc->sc_ah;
 	struct ath_common *common = ath9k_hw_common(ah);
-	u32 tsf, intval, nexttbtt;
+	u32 tsf, delta, intval, nexttbtt;
 
 	ath9k_reset_beacon_status(sc);
 
-	intval = TU_TO_USEC(conf->beacon_interval);
-	tsf = roundup(ath9k_hw_gettsf32(ah) + TU_TO_USEC(FUDGE), intval);
-	nexttbtt = tsf + intval;
+	tsf = ath9k_hw_gettsf32(ah) + TU_TO_USEC(FUDGE);
+	intval = TU_TO_USEC(conf->beacon_interval & ATH9K_BEACON_PERIOD);
+
+	if (!sc->beacon.bc_tstamp)
+		nexttbtt = tsf + intval;
+	else {
+		if (tsf > sc->beacon.bc_tstamp)
+			delta = (tsf - sc->beacon.bc_tstamp);
+		else
+			delta = (tsf + 1 + (~0U - sc->beacon.bc_tstamp));
+		nexttbtt = tsf + intval - (delta % intval);
+	}
 
 	ath_dbg(common, ATH_DBG_BEACON,
 		"IBSS nexttbtt %u intval %u (%u)\n",

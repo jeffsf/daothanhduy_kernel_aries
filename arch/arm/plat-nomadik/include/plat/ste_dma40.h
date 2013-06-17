@@ -10,7 +10,6 @@
 #define STE_DMA40_H
 
 #include <linux/dmaengine.h>
-#include <linux/scatterlist.h>
 #include <linux/workqueue.h>
 #include <linux/interrupt.h>
 

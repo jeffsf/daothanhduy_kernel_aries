@@ -76,9 +76,7 @@ struct stub_unlink {
 	__u32 status;
 };
 
-/* same as SYSFS_BUS_ID_SIZE */
-#define BUSID_SIZE 32
-
+#define BUSID_SIZE 20
 struct bus_id_priv {
 	char name[BUSID_SIZE];
 	char status;

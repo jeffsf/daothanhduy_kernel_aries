@@ -14,7 +14,7 @@
 #include <linux/radix-tree.h>
 
 #include <asm/types.h>
-#include <linux/atomic.h>
+#include <asm/atomic.h>
 
 
 /* Define a way to iterate across irqs. */
@@ -329,8 +329,6 @@ extern void call_do_softirq(struct thread_info *tp);
 extern int call_handle_irq(int irq, void *p1,
 			   struct thread_info *tp, void *func);
 extern void do_IRQ(struct pt_regs *regs);
-
-int irq_choose_cpu(const struct cpumask *mask);
 
 #endif /* _ASM_IRQ_H */
 #endif /* __KERNEL__ */

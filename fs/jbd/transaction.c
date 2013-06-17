@@ -26,7 +26,6 @@
 #include <linux/mm.h>
 #include <linux/highmem.h>
 #include <linux/hrtimer.h>
-#include <linux/backing-dev.h>
 
 static void __journal_temp_unlink_buffer(struct journal_head *jh);
 
@@ -100,10 +99,11 @@ static int start_this_handle(journal_t *journal, handle_t *handle)
 
 alloc_transaction:
 	if (!journal->j_running_transaction) {
-		new_transaction = kzalloc(sizeof(*new_transaction), GFP_NOFS);
+		new_transaction = kzalloc(sizeof(*new_transaction),
+						GFP_NOFS|__GFP_NOFAIL);
 		if (!new_transaction) {
-			congestion_wait(BLK_RW_ASYNC, HZ/50);
-			goto alloc_transaction;
+			ret = -ENOMEM;
+			goto out;
 		}
 	}
 
@@ -696,6 +696,7 @@ repeat:
 	if (!jh->b_transaction) {
 		JBUFFER_TRACE(jh, "no transaction");
 		J_ASSERT_JH(jh, !jh->b_next_transaction);
+		jh->b_transaction = transaction;
 		JBUFFER_TRACE(jh, "file as BJ_Reserved");
 		spin_lock(&journal->j_list_lock);
 		__journal_file_buffer(jh, transaction, BJ_Reserved);
@@ -817,6 +818,7 @@ int journal_get_create_access(handle_t *handle, struct buffer_head *bh)
 		 * committed and so it's safe to clear the dirty bit.
 		 */
 		clear_buffer_dirty(jh2bh(jh));
+		jh->b_transaction = transaction;
 
 		/* first access by this transaction */
 		jh->b_modified = 0;
@@ -842,8 +844,8 @@ int journal_get_create_access(handle_t *handle, struct buffer_head *bh)
 	 */
 	JBUFFER_TRACE(jh, "cancelling revoke");
 	journal_cancel_revoke(handle, jh);
-out:
 	journal_put_journal_head(jh);
+out:
 	return err;
 }
 
@@ -1067,9 +1069,8 @@ int journal_dirty_data(handle_t *handle, struct buffer_head *bh)
 				ret = -EIO;
 				goto no_journal;
 			}
-			/* We might have slept so buffer could be refiled now */
-			if (jh->b_transaction != NULL &&
-			    jh->b_transaction != handle->h_transaction) {
+
+			if (jh->b_transaction != NULL) {
 				JBUFFER_TRACE(jh, "unfile from commit");
 				__journal_temp_unlink_buffer(jh);
 				/* It still points to the committing
@@ -1090,6 +1091,8 @@ int journal_dirty_data(handle_t *handle, struct buffer_head *bh)
 		if (jh->b_jlist != BJ_SyncData && jh->b_jlist != BJ_Locked) {
 			JBUFFER_TRACE(jh, "not on correct data list: unfile");
 			J_ASSERT_JH(jh, jh->b_jlist != BJ_Shadow);
+			__journal_temp_unlink_buffer(jh);
+			jh->b_transaction = handle->h_transaction;
 			JBUFFER_TRACE(jh, "file as data");
 			__journal_file_buffer(jh, handle->h_transaction,
 						BJ_SyncData);
@@ -1297,6 +1300,8 @@ int journal_forget (handle_t *handle, struct buffer_head *bh)
 			__journal_file_buffer(jh, transaction, BJ_Forget);
 		} else {
 			__journal_unfile_buffer(jh);
+			journal_remove_journal_head(bh);
+			__brelse(bh);
 			if (!buffer_jbd(bh)) {
 				spin_unlock(&journal->j_list_lock);
 				jbd_unlock_bh_state(bh);
@@ -1617,32 +1622,19 @@ static void __journal_temp_unlink_buffer(struct journal_head *jh)
 		mark_buffer_dirty(bh);	/* Expose it to the VM */
 }
 
-/*
- * Remove buffer from all transactions.
- *
- * Called with bh_state lock and j_list_lock
- *
- * jh and bh may be already freed when this function returns.
- */
 void __journal_unfile_buffer(struct journal_head *jh)
 {
 	__journal_temp_unlink_buffer(jh);
 	jh->b_transaction = NULL;
-	journal_put_journal_head(jh);
 }
 
 void journal_unfile_buffer(journal_t *journal, struct journal_head *jh)
 {
-	struct buffer_head *bh = jh2bh(jh);
-
-	/* Get reference so that buffer cannot be freed before we unlock it */
-	get_bh(bh);
-	jbd_lock_bh_state(bh);
+	jbd_lock_bh_state(jh2bh(jh));
 	spin_lock(&journal->j_list_lock);
 	__journal_unfile_buffer(jh);
 	spin_unlock(&journal->j_list_lock);
-	jbd_unlock_bh_state(bh);
-	__brelse(bh);
+	jbd_unlock_bh_state(jh2bh(jh));
 }
 
 /*
@@ -1669,12 +1661,16 @@ __journal_try_to_free_buffer(journal_t *journal, struct buffer_head *bh)
 			/* A written-back ordered data buffer */
 			JBUFFER_TRACE(jh, "release data");
 			__journal_unfile_buffer(jh);
+			journal_remove_journal_head(bh);
+			__brelse(bh);
 		}
 	} else if (jh->b_cp_transaction != NULL && jh->b_transaction == NULL) {
 		/* written-back checkpointed metadata buffer */
 		if (jh->b_jlist == BJ_None) {
 			JBUFFER_TRACE(jh, "remove from checkpoint list");
 			__journal_remove_checkpoint(jh);
+			journal_remove_journal_head(bh);
+			__brelse(bh);
 		}
 	}
 	spin_unlock(&journal->j_list_lock);
@@ -1737,7 +1733,7 @@ int journal_try_to_free_buffers(journal_t *journal,
 		/*
 		 * We take our own ref against the journal_head here to avoid
 		 * having to add tons of locking around each instance of
-		 * journal_put_journal_head().
+		 * journal_remove_journal_head() and journal_put_journal_head().
 		 */
 		jh = journal_grab_journal_head(bh);
 		if (!jh)
@@ -1774,9 +1770,10 @@ static int __dispose_buffer(struct journal_head *jh, transaction_t *transaction)
 	int may_free = 1;
 	struct buffer_head *bh = jh2bh(jh);
 
+	__journal_unfile_buffer(jh);
+
 	if (jh->b_cp_transaction) {
 		JBUFFER_TRACE(jh, "on running+cp transaction");
-		__journal_temp_unlink_buffer(jh);
 		/*
 		 * We don't want to write the buffer anymore, clear the
 		 * bit so that we don't confuse checks in
@@ -1787,7 +1784,8 @@ static int __dispose_buffer(struct journal_head *jh, transaction_t *transaction)
 		may_free = 0;
 	} else {
 		JBUFFER_TRACE(jh, "on running transaction");
-		__journal_unfile_buffer(jh);
+		journal_remove_journal_head(bh);
+		__brelse(bh);
 	}
 	return may_free;
 }
@@ -2098,8 +2096,6 @@ void __journal_file_buffer(struct journal_head *jh,
 
 	if (jh->b_transaction)
 		__journal_temp_unlink_buffer(jh);
-	else
-		journal_grab_journal_head(bh);
 	jh->b_transaction = transaction;
 
 	switch (jlist) {
@@ -2157,10 +2153,9 @@ void journal_file_buffer(struct journal_head *jh,
  * already started to be used by a subsequent transaction, refile the
  * buffer on that transaction's metadata list.
  *
- * Called under j_list_lock
- * Called under jbd_lock_bh_state(jh2bh(jh))
+ * Called under journal->j_list_lock
  *
- * jh and bh may be already free when this function returns
+ * Called under jbd_lock_bh_state(jh2bh(jh))
  */
 void __journal_refile_buffer(struct journal_head *jh)
 {
@@ -2184,11 +2179,6 @@ void __journal_refile_buffer(struct journal_head *jh)
 
 	was_dirty = test_clear_buffer_jbddirty(bh);
 	__journal_temp_unlink_buffer(jh);
-	/*
-	 * We set b_transaction here because b_next_transaction will inherit
-	 * our jh reference and thus __journal_file_buffer() must not take a
-	 * new one.
-	 */
 	jh->b_transaction = jh->b_next_transaction;
 	jh->b_next_transaction = NULL;
 	if (buffer_freed(bh))
@@ -2205,21 +2195,30 @@ void __journal_refile_buffer(struct journal_head *jh)
 }
 
 /*
- * __journal_refile_buffer() with necessary locking added. We take our bh
- * reference so that we can safely unlock bh.
+ * For the unlocked version of this call, also make sure that any
+ * hanging journal_head is cleaned up if necessary.
  *
- * The jh and bh may be freed by this call.
+ * __journal_refile_buffer is usually called as part of a single locked
+ * operation on a buffer_head, in which the caller is probably going to
+ * be hooking the journal_head onto other lists.  In that case it is up
+ * to the caller to remove the journal_head if necessary.  For the
+ * unlocked journal_refile_buffer call, the caller isn't going to be
+ * doing anything else to the buffer so we need to do the cleanup
+ * ourselves to avoid a jh leak.
+ *
+ * *** The journal_head may be freed by this call! ***
  */
 void journal_refile_buffer(journal_t *journal, struct journal_head *jh)
 {
 	struct buffer_head *bh = jh2bh(jh);
 
-	/* Get reference so that buffer cannot be freed before we unlock it */
-	get_bh(bh);
 	jbd_lock_bh_state(bh);
 	spin_lock(&journal->j_list_lock);
+
 	__journal_refile_buffer(jh);
 	jbd_unlock_bh_state(bh);
+	journal_remove_journal_head(bh);
+
 	spin_unlock(&journal->j_list_lock);
 	__brelse(bh);
 }

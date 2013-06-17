@@ -603,13 +603,9 @@ void add_disk(struct gendisk *disk)
 	disk->major = MAJOR(devt);
 	disk->first_minor = MINOR(devt);
 
-<<<<<<< HEAD
 	disk_alloc_events(disk);
 
 	/* Register BDI before referencing it from bdev */ 
-=======
-	/* Register BDI before referencing it from bdev */
->>>>>>> v3.1
 	bdi = &disk->queue->backing_dev_info;
 	bdi_register_dev(bdi, disk_devt(disk));
 
@@ -1033,6 +1029,14 @@ static const struct attribute_group *disk_attr_groups[] = {
 	NULL
 };
 
+static void disk_free_ptbl_rcu_cb(struct rcu_head *head)
+{
+	struct disk_part_tbl *ptbl =
+		container_of(head, struct disk_part_tbl, rcu_head);
+
+	kfree(ptbl);
+}
+
 /**
  * disk_replace_part_tbl - replace disk->part_tbl in RCU-safe way
  * @disk: disk to replace part_tbl for
@@ -1053,7 +1057,7 @@ static void disk_replace_part_tbl(struct gendisk *disk,
 
 	if (old_ptbl) {
 		rcu_assign_pointer(old_ptbl->last_lookup, NULL);
-		kfree_rcu(old_ptbl, rcu_head);
+		call_rcu(&old_ptbl->rcu_head, disk_free_ptbl_rcu_cb);
 	}
 }
 
@@ -1174,23 +1178,23 @@ static int diskstats_show(struct seq_file *seqf, void *v)
 				"wsect wuse running use aveq"
 				"\n\n");
 	*/
-
+ 
 	disk_part_iter_init(&piter, gp, DISK_PITER_INCL_EMPTY_PART0);
 	while ((hd = disk_part_iter_next(&piter))) {
 		cpu = part_stat_lock();
 		part_round_stats(cpu, hd);
 		part_stat_unlock();
-		seq_printf(seqf, "%4d %7d %s %lu %lu %lu "
-			   "%u %lu %lu %lu %u %u %u %u\n",
+		seq_printf(seqf, "%4d %7d %s %lu %lu %llu "
+			   "%u %lu %lu %llu %u %u %u %u\n",
 			   MAJOR(part_devt(hd)), MINOR(part_devt(hd)),
 			   disk_name(gp, hd->partno, buf),
 			   part_stat_read(hd, ios[READ]),
 			   part_stat_read(hd, merges[READ]),
-			   part_stat_read(hd, sectors[READ]),
+			   (unsigned long long)part_stat_read(hd, sectors[READ]),
 			   jiffies_to_msecs(part_stat_read(hd, ticks[READ])),
 			   part_stat_read(hd, ios[WRITE]),
 			   part_stat_read(hd, merges[WRITE]),
-			   part_stat_read(hd, sectors[WRITE]),
+			   (unsigned long long)part_stat_read(hd, sectors[WRITE]),
 			   jiffies_to_msecs(part_stat_read(hd, ticks[WRITE])),
 			   part_in_flight(hd),
 			   jiffies_to_msecs(part_stat_read(hd, io_ticks)),
@@ -1198,7 +1202,7 @@ static int diskstats_show(struct seq_file *seqf, void *v)
 			);
 	}
 	disk_part_iter_exit(&piter);
-
+ 
 	return 0;
 }
 
@@ -1526,32 +1530,30 @@ void disk_unblock_events(struct gendisk *disk)
 }
 
 /**
- * disk_flush_events - schedule immediate event checking and flushing
- * @disk: disk to check and flush events for
- * @mask: events to flush
+ * disk_check_events - schedule immediate event checking
+ * @disk: disk to check events for
  *
- * Schedule immediate event checking on @disk if not blocked.  Events in
- * @mask are scheduled to be cleared from the driver.  Note that this
- * doesn't clear the events from @disk->ev.
+ * Schedule immediate event checking on @disk if not blocked.
  *
  * CONTEXT:
- * If @mask is non-zero must be called with bdev->bd_mutex held.
+ * Don't care.  Safe to call from irq context.
  */
-void disk_flush_events(struct gendisk *disk, unsigned int mask)
+void disk_check_events(struct gendisk *disk)
 {
 	struct disk_events *ev = disk->ev;
+	unsigned long flags;
 
 	if (!ev)
 		return;
 
-	spin_lock_irq(&ev->lock);
-	ev->clearing |= mask;
+	spin_lock_irqsave(&ev->lock, flags);
 	if (!ev->block) {
 		cancel_delayed_work(&ev->dwork);
 		queue_delayed_work(system_nrt_freezable_wq, &ev->dwork, 0);
 	}
-	spin_unlock_irq(&ev->lock);
+	spin_unlock_irqrestore(&ev->lock, flags);
 }
+EXPORT_SYMBOL_GPL(disk_check_events);
 
 /**
  * disk_clear_events - synchronously check, clear and return pending events
@@ -1741,7 +1743,7 @@ static int disk_events_set_dfl_poll_msecs(const char *val,
 	mutex_lock(&disk_events_mutex);
 
 	list_for_each_entry(ev, &disk_events, node)
-		disk_flush_events(ev->disk, 0);
+		disk_check_events(ev->disk);
 
 	mutex_unlock(&disk_events_mutex);
 

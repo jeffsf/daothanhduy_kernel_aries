@@ -22,7 +22,6 @@
 #include <linux/can/error.h>
 
 #include <linux/mfd/janz.h>
-#include <asm/io.h>
 
 /* the DPM has 64k of memory, organized into 256x 256 byte pages */
 #define DPM_NUM_PAGES		256

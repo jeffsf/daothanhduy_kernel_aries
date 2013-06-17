@@ -19,7 +19,6 @@
 #include <linux/clk.h>
 #include <linux/io.h>
 #include <linux/gpio.h>
-#include <linux/module.h>
 
 #include <linux/mmc/host.h>
 #include <linux/mmc/card.h>
@@ -567,9 +566,6 @@ static int __devinit sdhci_s3c_probe(struct platform_device *pdev)
 	/* This host supports the Auto CMD12 */
 	host->quirks |= SDHCI_QUIRK_MULTIBLOCK_READ_ACMD12;
 
-	/* Samsung SoCs need BROKEN_ADMA_ZEROLEN_DESC */
-	host->quirks |= SDHCI_QUIRK_BROKEN_ADMA_ZEROLEN_DESC;
-
 	if (pdata->cd_type == S3C_SDHCI_CD_NONE ||
 	    pdata->cd_type == S3C_SDHCI_CD_PERMANENT)
 		host->quirks |= SDHCI_QUIRK_BROKEN_CARD_DETECTION;
@@ -692,7 +688,6 @@ static int sdhci_s3c_suspend(struct platform_device *dev, pm_message_t pm)
 {
 	struct sdhci_host *host = platform_get_drvdata(dev);
 
-<<<<<<< HEAD
 	struct mmc_host *mmc = host->mmc;
 
 	if (mmc->card && (mmc->card->type == MMC_TYPE_SDIO))
@@ -700,9 +695,6 @@ static int sdhci_s3c_suspend(struct platform_device *dev, pm_message_t pm)
 
 	sdhci_suspend_host(host, pm);
 	return 0;
-=======
-	return sdhci_suspend_host(host, pm);
->>>>>>> v3.1
 }
 
 static int sdhci_s3c_resume(struct platform_device *dev)
@@ -711,7 +703,6 @@ static int sdhci_s3c_resume(struct platform_device *dev)
 	struct s3c_sdhci_platdata *pdata = dev->dev.platform_data;
 	u32 ier;
 
-<<<<<<< HEAD
 	sdhci_resume_host(host);
 
 	if (pdata->enable_intr_on_resume) {
@@ -722,9 +713,6 @@ static int sdhci_s3c_resume(struct platform_device *dev)
 	}
 
 	return 0;
-=======
-	return sdhci_resume_host(host);
->>>>>>> v3.1
 }
 
 #else

@@ -1358,10 +1358,7 @@ static int pass_accept_req(struct c4iw_dev *dev, struct sk_buff *skb)
 		goto reject;
 	}
 	dst = &rt->dst;
-<<<<<<< HEAD
 	rcu_read_lock();
-=======
->>>>>>> v3.1
 	neigh = dst_get_neighbour(dst);
 	if (neigh->dev->flags & IFF_LOOPBACK) {
 		pdev = ip_dev_find(&init_net, peer_ip);
@@ -1914,10 +1911,7 @@ int c4iw_connect(struct iw_cm_id *cm_id, struct iw_cm_conn_param *conn_param)
 	}
 	ep->dst = &rt->dst;
 
-<<<<<<< HEAD
 	rcu_read_lock();
-=======
->>>>>>> v3.1
 	neigh = dst_get_neighbour(ep->dst);
 
 	/* get a l2t entry */

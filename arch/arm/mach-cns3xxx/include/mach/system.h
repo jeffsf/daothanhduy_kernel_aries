@@ -13,6 +13,7 @@
 
 #include <linux/io.h>
 #include <asm/proc-fns.h>
+#include <mach/hardware.h>
 
 static inline void arch_idle(void)
 {

@@ -9,7 +9,6 @@
 #include <linux/mm.h>
 #include <linux/pm.h>
 #include <linux/memblock.h>
-#include <linux/cpuidle.h>
 
 #include <asm/elf.h>
 #include <asm/vdso.h>
@@ -94,6 +93,8 @@ static unsigned long __init xen_release_chunk(phys_addr_t start_addr,
 	if (end <= start)
 		return 0;
 
+	printk(KERN_INFO "xen_release_chunk: looking at area pfn %lx-%lx: ",
+	       start, end);
 	for(pfn = start; pfn < end; pfn++) {
 		unsigned long mfn = pfn_to_mfn(pfn);
 
@@ -106,14 +107,14 @@ static unsigned long __init xen_release_chunk(phys_addr_t start_addr,
 
 		ret = HYPERVISOR_memory_op(XENMEM_decrease_reservation,
 					   &reservation);
-		WARN(ret != 1, "Failed to release pfn %lx err=%d\n", pfn, ret);
+		WARN(ret != 1, "Failed to release memory %lx-%lx err=%d\n",
+		     start, end, ret);
 		if (ret == 1) {
 			__set_phys_to_machine(pfn, INVALID_P2M_ENTRY);
 			len++;
 		}
 	}
-	printk(KERN_INFO "Freeing  %lx-%lx pfn range: %lu pages freed\n",
-	       start, end, len);
+	printk(KERN_CONT "%ld pages freed\n", len);
 
 	return len;
 }
@@ -139,7 +140,7 @@ static unsigned long __init xen_return_unused_memory(unsigned long max_pfn,
 	if (last_end < max_addr)
 		released += xen_release_chunk(last_end, max_addr);
 
-	printk(KERN_INFO "released %lu pages of unused memory\n", released);
+	printk(KERN_INFO "released %ld pages of unused memory\n", released);
 	return released;
 }
 
@@ -192,7 +193,6 @@ static unsigned long __init xen_get_max_pages(void)
 	domid_t domid = DOMID_SELF;
 	int ret;
 
-<<<<<<< HEAD
 	/*
 	 * For the initial domain we use the maximum reservation as
 	 * the maximum page.
@@ -208,11 +208,6 @@ static unsigned long __init xen_get_max_pages(void)
 			max_pages = ret;
 	}
 
-=======
-	ret = HYPERVISOR_memory_op(XENMEM_maximum_reservation, &domid);
-	if (ret > 0)
-		max_pages = ret;
->>>>>>> v3.1
 	return min(max_pages, MAX_DOMAIN_PAGES);
 }
 
@@ -465,7 +460,7 @@ void __init xen_arch_setup(void)
 #ifdef CONFIG_X86_32
 	boot_cpu_data.hlt_works_ok = 1;
 #endif
-	disable_cpuidle();
+	pm_idle = default_idle;
 	boot_option_idle_override = IDLE_HALT;
 
 	fiddle_vdso();

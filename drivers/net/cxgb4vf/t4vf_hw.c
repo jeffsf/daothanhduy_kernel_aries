@@ -33,6 +33,7 @@
  * SOFTWARE.
  */
 
+#include <linux/version.h>
 #include <linux/pci.h>
 
 #include "t4vf_common.h"

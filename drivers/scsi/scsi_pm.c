@@ -159,9 +159,9 @@ int scsi_autopm_get_device(struct scsi_device *sdev)
 	int	err;
 
 	err = pm_runtime_get_sync(&sdev->sdev_gendev);
-	if (err < 0 && err !=-EACCES)
+	if (err < 0)
 		pm_runtime_put_sync(&sdev->sdev_gendev);
-	else
+	else if (err > 0)
 		err = 0;
 	return err;
 }
@@ -188,9 +188,9 @@ int scsi_autopm_get_host(struct Scsi_Host *shost)
 	int	err;
 
 	err = pm_runtime_get_sync(&shost->shost_gendev);
-	if (err < 0 && err !=-EACCES)
+	if (err < 0)
 		pm_runtime_put_sync(&shost->shost_gendev);
-	else
+	else if (err > 0)
 		err = 0;
 	return err;
 }

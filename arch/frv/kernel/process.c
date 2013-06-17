@@ -143,7 +143,10 @@ void machine_power_off(void)
 
 void flush_thread(void)
 {
-	/* nothing */
+#if 0 //ndef NO_FPU
+	unsigned long zero = 0;
+#endif
+	set_fs(USER_DS);
 }
 
 inline unsigned long user_stack(const struct pt_regs *regs)

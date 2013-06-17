@@ -19,8 +19,6 @@
 
 #define pr_fmt(fmt) KBUILD_MODNAME ": " fmt
 
-#include <linux/hardirq.h>
-#include <linux/interrupt.h>
 #include <linux/moduleparam.h>
 #include <linux/firmware.h>
 #include <linux/jiffies.h>
@@ -1035,6 +1033,7 @@ static irqreturn_t if_spi_host_interrupt(int irq, void *dev_id)
 static int if_spi_init_card(struct if_spi_card *card)
 {
 	struct lbs_private *priv = card->priv;
+	struct spi_device *spi = card->spi;
 	int err, i;
 	u32 scratch;
 	const struct firmware *helper = NULL;
@@ -1082,9 +1081,8 @@ static int if_spi_init_card(struct if_spi_card *card)
 				"attached to SPI bus_num %d, chip_select %d. "
 				"spi->max_speed_hz=%d\n",
 				card->card_id, card->card_rev,
-				card->spi->master->bus_num,
-				card->spi->chip_select,
-				card->spi->max_speed_hz);
+				spi->master->bus_num, spi->chip_select,
+				spi->max_speed_hz);
 		err = if_spi_prog_helper_firmware(card, helper);
 		if (err)
 			goto out;
