@@ -275,7 +275,11 @@ versions.
 If no 3.x.y kernel is available, then the highest numbered 3.x
 kernel is the current stable kernel.
 
+<<<<<<< HEAD
 3.x.y are maintained by the "stable" team <stable@vger.kernel.org>, and
+=======
+2.6.x.y are maintained by the "stable" team <stable@vger.kernel.org>, and
+>>>>>>> v3.1.9
 are released as needs dictate.  The normal release period is approximately
 two weeks, but it can be longer if there are no pressing problems.  A
 security-related problem, instead, can cause a release to happen almost

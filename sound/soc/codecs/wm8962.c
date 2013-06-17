@@ -2214,6 +2214,18 @@ static int sysclk_event(struct snd_soc_dapm_widget *w,
 		if (fll)
 			snd_soc_update_bits(codec, WM8962_FLL_CONTROL_1,
 					    WM8962_FLL_ENA, WM8962_FLL_ENA);
+<<<<<<< HEAD
+=======
+
+			timeout = msecs_to_jiffies(5);
+			timeout = wait_for_completion_timeout(&wm8962->fll_lock,
+							      timeout);
+
+			if (wm8962->irq && timeout == 0)
+				dev_err(codec->dev,
+					"Timed out starting FLL\n");
+		}
+>>>>>>> v3.1.9
 		break;
 
 	case SND_SOC_DAPM_POST_PMD:
@@ -3831,6 +3843,11 @@ static int wm8962_probe(struct snd_soc_codec *codec)
 	 * write to registers if the device is declocked.
 	 */
 	snd_soc_update_bits(codec, WM8962_CLOCKING2, WM8962_SYSCLK_ENA, 0);
+
+	/* Ensure that the oscillator and PLLs are disabled */
+	snd_soc_update_bits(codec, WM8962_PLL2,
+			    WM8962_OSC_ENA | WM8962_PLL2_ENA | WM8962_PLL3_ENA,
+			    0);
 
 	/* Ensure that the oscillator and PLLs are disabled */
 	snd_soc_update_bits(codec, WM8962_PLL2,

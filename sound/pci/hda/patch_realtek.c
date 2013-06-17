@@ -510,6 +510,14 @@ static int alc_mux_enum_put(struct snd_kcontrol *kcontrol,
 	if (!imux->num_items && mux_idx > 0)
 		imux = &spec->input_mux[0];
 	if (!imux->num_items)
+<<<<<<< HEAD
+=======
+		return 0;
+
+	if (idx >= imux->num_items)
+		idx = imux->num_items - 1;
+	if (spec->cur_mux[adc_idx] == idx && !force)
+>>>>>>> v3.1.9
 		return 0;
 
 	type = get_wcaps_type(get_wcaps(codec, nid));
@@ -1632,6 +1640,147 @@ static void alc_init_auto_hp(struct hda_codec *codec)
 	}
 }
 
+<<<<<<< HEAD
+=======
+/* return the position of NID in the list, or -1 if not found */
+static int find_idx_in_nid_list(hda_nid_t nid, const hda_nid_t *list, int nums)
+{
+	int i;
+	for (i = 0; i < nums; i++)
+		if (list[i] == nid)
+			return i;
+	return -1;
+}
+
+/* check whether dynamic ADC-switching is available */
+static bool alc_check_dyn_adc_switch(struct hda_codec *codec)
+{
+	struct alc_spec *spec = codec->spec;
+	struct hda_input_mux *imux = &spec->private_imux[0];
+	int i, n, idx;
+	hda_nid_t cap, pin;
+
+	if (imux != spec->input_mux) /* no dynamic imux? */
+		return false;
+
+	for (n = 0; n < spec->num_adc_nids; n++) {
+		cap = spec->private_capsrc_nids[n];
+		for (i = 0; i < imux->num_items; i++) {
+			pin = spec->imux_pins[i];
+			if (!pin)
+				return false;
+			if (get_connection_index(codec, cap, pin) < 0)
+				break;
+		}
+		if (i >= imux->num_items)
+			return true; /* no ADC-switch is needed */
+	}
+
+	for (i = 0; i < imux->num_items; i++) {
+		pin = spec->imux_pins[i];
+		for (n = 0; n < spec->num_adc_nids; n++) {
+			cap = spec->private_capsrc_nids[n];
+			idx = get_connection_index(codec, cap, pin);
+			if (idx >= 0) {
+				imux->items[i].index = idx;
+				spec->dyn_adc_idx[i] = n;
+				break;
+			}
+		}
+	}
+
+	snd_printdd("realtek: enabling ADC switching\n");
+	spec->dyn_adc_switch = 1;
+	return true;
+}
+
+/* rebuild imux for matching with the given auto-mic pins (if not yet) */
+static bool alc_rebuild_imux_for_auto_mic(struct hda_codec *codec)
+{
+	struct alc_spec *spec = codec->spec;
+	struct hda_input_mux *imux;
+	static char * const texts[3] = {
+		"Mic", "Internal Mic", "Dock Mic"
+	};
+	int i;
+
+	if (!spec->auto_mic)
+		return false;
+	imux = &spec->private_imux[0];
+	if (spec->input_mux == imux)
+		return true;
+	spec->imux_pins[0] = spec->ext_mic_pin;
+	spec->imux_pins[1] = spec->int_mic_pin;
+	spec->imux_pins[2] = spec->dock_mic_pin;
+	for (i = 0; i < 3; i++) {
+		strcpy(imux->items[i].label, texts[i]);
+		if (spec->imux_pins[i]) {
+			hda_nid_t pin = spec->imux_pins[i];
+			int c;
+			for (c = 0; c < spec->num_adc_nids; c++) {
+				hda_nid_t cap = spec->capsrc_nids ?
+				spec->capsrc_nids[c] : spec->adc_nids[c];
+				int idx = get_connection_index(codec, cap, pin);
+				if (idx >= 0) {
+					imux->items[i].index = idx;
+					break;
+				}
+			}
+			imux->num_items = i + 1;
+		}
+	}
+	spec->num_mux_defs = 1;
+	spec->input_mux = imux;
+	return true;
+}
+
+/* check whether all auto-mic pins are valid; setup indices if OK */
+static bool alc_auto_mic_check_imux(struct hda_codec *codec)
+{
+	struct alc_spec *spec = codec->spec;
+	const struct hda_input_mux *imux;
+
+	if (!spec->auto_mic)
+		return false;
+	if (spec->auto_mic_valid_imux)
+		return true; /* already checked */
+
+	/* fill up imux indices */
+	if (!alc_check_dyn_adc_switch(codec)) {
+		spec->auto_mic = 0;
+		return false;
+	}
+
+	imux = spec->input_mux;
+	spec->ext_mic_idx = find_idx_in_nid_list(spec->ext_mic_pin,
+					spec->imux_pins, imux->num_items);
+	spec->int_mic_idx = find_idx_in_nid_list(spec->int_mic_pin,
+					spec->imux_pins, imux->num_items);
+	spec->dock_mic_idx = find_idx_in_nid_list(spec->dock_mic_pin,
+					spec->imux_pins, imux->num_items);
+	if (spec->ext_mic_idx < 0 || spec->int_mic_idx < 0) {
+		spec->auto_mic = 0;
+		return false; /* no corresponding imux */
+	}
+
+	snd_hda_codec_write_cache(codec, spec->ext_mic_pin, 0,
+				  AC_VERB_SET_UNSOLICITED_ENABLE,
+				  AC_USRSP_EN | ALC_MIC_EVENT);
+	if (spec->dock_mic_pin)
+		snd_hda_codec_write_cache(codec, spec->dock_mic_pin, 0,
+				  AC_VERB_SET_UNSOLICITED_ENABLE,
+				  AC_USRSP_EN | ALC_MIC_EVENT);
+
+	spec->auto_mic_valid_imux = 1;
+	spec->auto_mic = 1;
+	return true;
+}
+
+/*
+ * Check the availability of auto-mic switch;
+ * Set up if really supported
+ */
+>>>>>>> v3.1.9
 static void alc_init_auto_mic(struct hda_codec *codec)
 {
 	struct alc_spec *spec = codec->spec;
@@ -2098,9 +2247,16 @@ static void alc_auto_parse_digital(struct hda_codec *codec)
 	for (i = 0; i < spec->autocfg.dig_outs; i++) {
 		err = snd_hda_get_connections(codec,
 					      spec->autocfg.dig_out_pins[i],
+<<<<<<< HEAD
 					      &dig_nid, 1);
 		if (err <= 0)
 			continue;
+=======
+					      conn, ARRAY_SIZE(conn));
+		if (err <= 0)
+			continue;
+		dig_nid = conn[0]; /* assume the first element is audio-out */
+>>>>>>> v3.1.9
 		if (!nums) {
 			spec->multiout.dig_out_nid = dig_nid;
 			spec->dig_out_type = spec->autocfg.dig_out_type[0];
@@ -4405,6 +4561,11 @@ static int alc_build_pcms(struct hda_codec *codec)
 {
 	struct alc_spec *spec = codec->spec;
 	struct hda_pcm *info = spec->pcm_rec;
+<<<<<<< HEAD
+=======
+	const struct hda_pcm_stream *p;
+	bool have_multi_adcs;
+>>>>>>> v3.1.9
 	int i;
 
 	codec->num_pcms = 1;
@@ -4473,9 +4634,16 @@ static int alc_build_pcms(struct hda_codec *codec)
 	/* If the use of more than one ADC is requested for the current
 	 * model, configure a second analog capture-only PCM.
 	 */
+	have_multi_adcs = (spec->num_adc_nids > 1) &&
+		!spec->dyn_adc_switch && !spec->auto_mic &&
+		(!spec->input_mux || spec->input_mux->num_items > 1);
 	/* Additional Analaog capture for index #2 */
+<<<<<<< HEAD
 	if ((spec->alt_dac_nid && spec->stream_analog_alt_playback) ||
 	    (spec->num_adc_nids > 1 && spec->stream_analog_alt_capture)) {
+=======
+	if (spec->alt_dac_nid || have_multi_adcs) {
+>>>>>>> v3.1.9
 		codec->num_pcms = 3;
 		info = spec->pcm_rec + 2;
 		info->name = spec->stream_name_analog;
@@ -4489,9 +4657,17 @@ static int alc_build_pcms(struct hda_codec *codec)
 				alc_pcm_null_stream;
 			info->stream[SNDRV_PCM_STREAM_PLAYBACK].nid = 0;
 		}
+<<<<<<< HEAD
 		if (spec->num_adc_nids > 1 && spec->stream_analog_alt_capture) {
 			info->stream[SNDRV_PCM_STREAM_CAPTURE] =
 				*spec->stream_analog_alt_capture;
+=======
+		if (have_multi_adcs) {
+			p = spec->stream_analog_alt_capture;
+			if (!p)
+				p = &alc_pcm_analog_alt_capture;
+			info->stream[SNDRV_PCM_STREAM_CAPTURE] = *p;
+>>>>>>> v3.1.9
 			info->stream[SNDRV_PCM_STREAM_CAPTURE].nid =
 				spec->adc_nids[1];
 			info->stream[SNDRV_PCM_STREAM_CAPTURE].substreams =
@@ -5960,6 +6136,20 @@ static void fillup_priv_adc_nids(struct hda_codec *codec, const hda_nid_t *nids,
 			spec->capsrc_nids = spec->private_adc_nids;
 		}
 	}
+<<<<<<< HEAD
+=======
+	/* initialize volume */
+	nid = alc_look_for_out_vol_nid(codec, pin, dac);
+	if (nid)
+		snd_hda_codec_write(codec, nid, 0, AC_VERB_SET_AMP_GAIN_MUTE,
+				    AMP_OUT_ZERO);
+
+	/* unmute DAC if it's not assigned to a mixer */
+	nid = alc_look_for_out_mute_nid(codec, pin, dac);
+	if (nid == mix && nid_has_mute(codec, dac, HDA_OUTPUT))
+		snd_hda_codec_write(codec, dac, 0, AC_VERB_SET_AMP_GAIN_MUTE,
+				    AMP_OUT_ZERO);
+>>>>>>> v3.1.9
 }
 
 #ifdef CONFIG_SND_HDA_INPUT_BEEP

@@ -162,6 +162,7 @@ enum pnfs_try_status pnfs_try_to_write_data(struct nfs_write_data *,
 enum pnfs_try_status pnfs_try_to_read_data(struct nfs_read_data *,
 					    const struct rpc_call_ops *);
 bool pnfs_generic_pg_test(struct nfs_pageio_descriptor *pgio, struct nfs_page *prev, struct nfs_page *req);
+void pnfs_set_lo_fail(struct pnfs_layout_segment *lseg);
 int pnfs_layout_process(struct nfs4_layoutget *lgp);
 void pnfs_free_lseg_list(struct list_head *tmp_list);
 void pnfs_destroy_layout(struct nfs_inode *);
@@ -183,8 +184,26 @@ bool pnfs_roc_drain(struct inode *ino, u32 *barrier);
 void pnfs_set_layoutcommit(struct nfs_write_data *wdata);
 int pnfs_layoutcommit_inode(struct inode *inode, bool sync);
 int _pnfs_return_layout(struct inode *);
+<<<<<<< HEAD
 int pnfs_ld_write_done(struct nfs_write_data *);
 int pnfs_ld_read_done(struct nfs_read_data *);
+=======
+void pnfs_ld_write_done(struct nfs_write_data *);
+void pnfs_ld_read_done(struct nfs_read_data *);
+struct pnfs_layout_segment *pnfs_update_layout(struct inode *ino,
+					       struct nfs_open_context *ctx,
+					       loff_t pos,
+					       u64 count,
+					       enum pnfs_iomode iomode,
+					       gfp_t gfp_flags);
+
+void nfs4_deviceid_mark_client_invalid(struct nfs_client *clp);
+
+/* nfs4_deviceid_flags */
+enum {
+	NFS_DEVICEID_INVALID = 0,       /* set when MDS clientid recalled */
+};
+>>>>>>> v3.1.9
 
 /* pnfs_dev.c */
 struct nfs4_deviceid_node {

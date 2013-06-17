@@ -2607,6 +2607,17 @@ static int iwlagn_mac_set_key(struct ieee80211_hw *hw, enum set_key_cmd cmd,
 		return -EOPNOTSUPP;
 	}
 
+	switch (key->cipher) {
+	case WLAN_CIPHER_SUITE_TKIP:
+		key->flags |= IEEE80211_KEY_FLAG_GENERATE_MMIC;
+		/* fall through */
+	case WLAN_CIPHER_SUITE_CCMP:
+		key->flags |= IEEE80211_KEY_FLAG_GENERATE_IV;
+		break;
+	default:
+		break;
+	}
+
 	/*
 	 * To support IBSS RSN, don't program group keys in IBSS, the
 	 * hardware will then not attempt to decrypt the frames.
@@ -2868,7 +2879,16 @@ static void iwlagn_mac_channel_switch(struct ieee80211_hw *hw,
 			}
 			spin_lock_irqsave(&priv->lock, flags);
 
+<<<<<<< HEAD
 			priv->current_ht_config.smps = conf->smps_mode;
+=======
+	/* Configure HT40 channels */
+	ctx->ht.enabled = conf_is_ht(conf);
+	if (ctx->ht.enabled)
+		iwlagn_config_ht40(conf, ctx);
+	else
+		ctx->ht.is_40mhz = false;
+>>>>>>> v3.1.9
 
 			/* Configure HT40 channels */
 			ctx->ht.enabled = conf_is_ht(conf);

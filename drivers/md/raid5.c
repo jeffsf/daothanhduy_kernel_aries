@@ -3081,7 +3081,11 @@ static void handle_stripe5(struct stripe_head *sh)
 		else if (test_bit(In_sync, &rdev->flags))
 			set_bit(R5_Insync, &dev->flags);
 		else if (!test_bit(Faulty, &rdev->flags)) {
+<<<<<<< HEAD
 			/* could be in-sync depending on recovery/reshape status */
+=======
+			/* in sync if before recovery_offset */
+>>>>>>> v3.1.9
 			if (sh->sector + STRIPE_SECTORS <= rdev->recovery_offset)
 				set_bit(R5_Insync, &dev->flags);
 		}
@@ -3110,9 +3114,18 @@ static void handle_stripe5(struct stripe_head *sh)
 		blocked_rdev = NULL;
 	}
 
+<<<<<<< HEAD
 	if (s.to_fill && !test_bit(STRIPE_BIOFILL_RUN, &sh->state)) {
 		set_bit(STRIPE_OP_BIOFILL, &s.ops_request);
 		set_bit(STRIPE_BIOFILL_RUN, &sh->state);
+=======
+	clear_bit(STRIPE_HANDLE, &sh->state);
+	if (test_and_set_bit_lock(STRIPE_ACTIVE, &sh->state)) {
+		/* already being handled, ensure it gets handled
+		 * again when current action finishes */
+		set_bit(STRIPE_HANDLE, &sh->state);
+		return;
+>>>>>>> v3.1.9
 	}
 
 	pr_debug("locked=%d uptodate=%d to_read=%d"
@@ -3418,6 +3431,7 @@ static void handle_stripe6(struct stripe_head *sh)
 	/* check if the array has lost >2 devices and, if so, some requests
 	 * might need to be failed
 	 */
+<<<<<<< HEAD
 	if (s.failed > 2) {
 		sh->check_state = 0;
 		sh->reconstruct_state = 0;
@@ -3428,6 +3442,15 @@ static void handle_stripe6(struct stripe_head *sh)
 			clear_bit(STRIPE_SYNCING, &sh->state);
 			s.syncing = 0;
 		}
+=======
+	if (s.failed > conf->max_degraded) {
+		sh->check_state = 0;
+		sh->reconstruct_state = 0;
+		if (s.to_read+s.to_write+s.written)
+			handle_failed_stripe(conf, sh, &s, disks, &s.return_bi);
+		if (s.syncing)
+			handle_failed_sync(conf, sh, &s);
+>>>>>>> v3.1.9
 	}
 
 	/*
@@ -3608,12 +3631,16 @@ static void handle_stripe6(struct stripe_head *sh)
 	return_io(return_bi);
 }
 
+<<<<<<< HEAD
 static void handle_stripe(struct stripe_head *sh)
 {
 	if (sh->raid_conf->level == 6)
 		handle_stripe6(sh);
 	else
 		handle_stripe5(sh);
+=======
+	clear_bit_unlock(STRIPE_ACTIVE, &sh->state);
+>>>>>>> v3.1.9
 }
 
 static void raid5_activate_delayed(raid5_conf_t *conf)

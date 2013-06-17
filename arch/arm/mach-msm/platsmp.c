@@ -149,7 +149,17 @@ void __init smp_init_cpus(void)
 {
 	unsigned int i;
 
+<<<<<<< HEAD
 	for (i = 0; i < NR_CPUS; i++)
+=======
+	if (ncores > nr_cpu_ids) {
+		pr_warn("SMP: %u cores greater than maximum (%u), clipping\n",
+			ncores, nr_cpu_ids);
+		ncores = nr_cpu_ids;
+	}
+
+	for (i = 0; i < ncores; i++)
+>>>>>>> v3.1.9
 		set_cpu_possible(i, true);
 
         set_smp_cross_call(gic_raise_softirq);

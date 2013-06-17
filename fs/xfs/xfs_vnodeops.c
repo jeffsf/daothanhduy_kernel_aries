@@ -554,8 +554,12 @@ xfs_readlink(
 			 __func__, (unsigned long long) ip->i_ino,
 			 (long long) pathlen);
 		ASSERT(0);
+<<<<<<< HEAD
 		error = XFS_ERROR(EFSCORRUPTED);
 		goto out;
+=======
+		return XFS_ERROR(EFSCORRUPTED);
+>>>>>>> v3.1.9
 	}
 
 

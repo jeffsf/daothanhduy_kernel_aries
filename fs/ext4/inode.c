@@ -3621,10 +3621,11 @@ static void ext4_end_io_dio(struct kiocb *iocb, loff_t offset,
  		  iocb->private, io_end->inode->i_ino, iocb, offset,
 		  size);
 
+	iocb->private = NULL;
+
 	/* if not aio dio with unwritten extents, just free io and return */
 	if (!(io_end->flag & EXT4_IO_END_UNWRITTEN)) {
 		ext4_free_io_end(io_end);
-		iocb->private = NULL;
 out:
 		if (is_async)
 			aio_complete(iocb, ret, 0);
@@ -3647,7 +3648,13 @@ out:
 
 	/* queue the work to convert unwritten extents to written */
 	queue_work(wq, &io_end->work);
+<<<<<<< HEAD
 	iocb->private = NULL;
+=======
+
+	/* XXX: probably should move into the real I/O completion handler */
+	inode_dio_done(inode);
+>>>>>>> v3.1.9
 }
 
 static void ext4_end_io_buffer_write(struct buffer_head *bh, int uptodate)
@@ -5967,6 +5974,28 @@ int ext4_page_mkwrite(struct vm_area_struct *vma, struct vm_fault *vmf)
 out_unlock:
 	if (ret)
 		ret = VM_FAULT_SIGBUS;
+<<<<<<< HEAD
 	up_read(&inode->i_alloc_sem);
+=======
+		goto out;
+	}
+	ret = __block_page_mkwrite(vma, vmf, get_block);
+	if (!ret && ext4_should_journal_data(inode)) {
+		if (walk_page_buffers(handle, page_buffers(page), 0,
+			  PAGE_CACHE_SIZE, NULL, do_journal_get_write_access)) {
+			unlock_page(page);
+			ret = VM_FAULT_SIGBUS;
+			ext4_journal_stop(handle);
+			goto out;
+		}
+		ext4_set_inode_state(inode, EXT4_STATE_JDATA);
+	}
+	ext4_journal_stop(handle);
+	if (ret == -ENOSPC && ext4_should_retry_alloc(inode->i_sb, &retries))
+		goto retry_alloc;
+out_ret:
+	ret = block_page_mkwrite_return(ret);
+out:
+>>>>>>> v3.1.9
 	return ret;
 }

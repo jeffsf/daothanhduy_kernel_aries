@@ -50,9 +50,41 @@
 #define HDMI_USE_AUDIO
 #endif
 
+<<<<<<< HEAD
 /*
  *Definitions of clock related.
 */
+=======
+static int wm8994_readable(struct snd_soc_codec *codec, unsigned int reg)
+{
+	struct wm8994_priv *wm8994 = snd_soc_codec_get_drvdata(codec);
+	struct wm8994 *control = codec->control_data;
+
+	switch (reg) {
+	case WM8994_GPIO_1:
+	case WM8994_GPIO_2:
+	case WM8994_GPIO_3:
+	case WM8994_GPIO_4:
+	case WM8994_GPIO_5:
+	case WM8994_GPIO_6:
+	case WM8994_GPIO_7:
+	case WM8994_GPIO_8:
+	case WM8994_GPIO_9:
+	case WM8994_GPIO_10:
+	case WM8994_GPIO_11:
+	case WM8994_INTERRUPT_STATUS_1:
+	case WM8994_INTERRUPT_STATUS_2:
+	case WM8994_INTERRUPT_RAW_STATUS_2:
+		return 1;
+
+	case WM8958_DSP2_PROGRAM:
+	case WM8958_DSP2_CONFIG:
+	case WM8958_DSP2_EXECCONTROL:
+		if (control->type == WM8958)
+			return 1;
+		else
+			return 0;
+>>>>>>> v3.1.9
 
 static struct {
 	int ratio;
@@ -811,6 +843,309 @@ static int wm8994_add_controls(struct snd_soc_codec *codec)
 				    ARRAY_SIZE(wm8994_snd_controls));
 }
 static const struct snd_soc_dapm_widget wm8994_dapm_widgets[] = {
+<<<<<<< HEAD
+=======
+SND_SOC_DAPM_INPUT("DMIC1DAT"),
+SND_SOC_DAPM_INPUT("DMIC2DAT"),
+SND_SOC_DAPM_INPUT("Clock"),
+
+SND_SOC_DAPM_SUPPLY_S("MICBIAS Supply", 1, SND_SOC_NOPM, 0, 0, micbias_ev,
+		      SND_SOC_DAPM_PRE_PMU),
+
+SND_SOC_DAPM_SUPPLY("CLK_SYS", SND_SOC_NOPM, 0, 0, clk_sys_event,
+		    SND_SOC_DAPM_POST_PMU | SND_SOC_DAPM_PRE_PMD),
+
+SND_SOC_DAPM_SUPPLY("DSP1CLK", WM8994_CLOCKING_1, 3, 0, NULL, 0),
+SND_SOC_DAPM_SUPPLY("DSP2CLK", WM8994_CLOCKING_1, 2, 0, NULL, 0),
+SND_SOC_DAPM_SUPPLY("DSPINTCLK", WM8994_CLOCKING_1, 1, 0, NULL, 0),
+
+SND_SOC_DAPM_AIF_OUT("AIF1ADC1L", NULL,
+		     0, WM8994_POWER_MANAGEMENT_4, 9, 0),
+SND_SOC_DAPM_AIF_OUT("AIF1ADC1R", NULL,
+		     0, WM8994_POWER_MANAGEMENT_4, 8, 0),
+SND_SOC_DAPM_AIF_IN_E("AIF1DAC1L", NULL, 0,
+		      WM8994_POWER_MANAGEMENT_5, 9, 0, wm8958_aif_ev,
+		      SND_SOC_DAPM_POST_PMU | SND_SOC_DAPM_POST_PMD),
+SND_SOC_DAPM_AIF_IN_E("AIF1DAC1R", NULL, 0,
+		      WM8994_POWER_MANAGEMENT_5, 8, 0, wm8958_aif_ev,
+		      SND_SOC_DAPM_POST_PMU | SND_SOC_DAPM_POST_PMD),
+
+SND_SOC_DAPM_AIF_OUT("AIF1ADC2L", NULL,
+		     0, WM8994_POWER_MANAGEMENT_4, 11, 0),
+SND_SOC_DAPM_AIF_OUT("AIF1ADC2R", NULL,
+		     0, WM8994_POWER_MANAGEMENT_4, 10, 0),
+SND_SOC_DAPM_AIF_IN_E("AIF1DAC2L", NULL, 0,
+		      WM8994_POWER_MANAGEMENT_5, 11, 0, wm8958_aif_ev,
+		      SND_SOC_DAPM_POST_PMU | SND_SOC_DAPM_POST_PMD),
+SND_SOC_DAPM_AIF_IN_E("AIF1DAC2R", NULL, 0,
+		      WM8994_POWER_MANAGEMENT_5, 10, 0, wm8958_aif_ev,
+		      SND_SOC_DAPM_POST_PMU | SND_SOC_DAPM_POST_PMD),
+
+SND_SOC_DAPM_MIXER("AIF1ADC1L Mixer", SND_SOC_NOPM, 0, 0,
+		   aif1adc1l_mix, ARRAY_SIZE(aif1adc1l_mix)),
+SND_SOC_DAPM_MIXER("AIF1ADC1R Mixer", SND_SOC_NOPM, 0, 0,
+		   aif1adc1r_mix, ARRAY_SIZE(aif1adc1r_mix)),
+
+SND_SOC_DAPM_MIXER("AIF1ADC2L Mixer", SND_SOC_NOPM, 0, 0,
+		   aif1adc2l_mix, ARRAY_SIZE(aif1adc2l_mix)),
+SND_SOC_DAPM_MIXER("AIF1ADC2R Mixer", SND_SOC_NOPM, 0, 0,
+		   aif1adc2r_mix, ARRAY_SIZE(aif1adc2r_mix)),
+
+SND_SOC_DAPM_MIXER("AIF2DAC2L Mixer", SND_SOC_NOPM, 0, 0,
+		   aif2dac2l_mix, ARRAY_SIZE(aif2dac2l_mix)),
+SND_SOC_DAPM_MIXER("AIF2DAC2R Mixer", SND_SOC_NOPM, 0, 0,
+		   aif2dac2r_mix, ARRAY_SIZE(aif2dac2r_mix)),
+
+SND_SOC_DAPM_MUX("Left Sidetone", SND_SOC_NOPM, 0, 0, &sidetone1_mux),
+SND_SOC_DAPM_MUX("Right Sidetone", SND_SOC_NOPM, 0, 0, &sidetone2_mux),
+
+SND_SOC_DAPM_MIXER("DAC1L Mixer", SND_SOC_NOPM, 0, 0,
+		   dac1l_mix, ARRAY_SIZE(dac1l_mix)),
+SND_SOC_DAPM_MIXER("DAC1R Mixer", SND_SOC_NOPM, 0, 0,
+		   dac1r_mix, ARRAY_SIZE(dac1r_mix)),
+
+SND_SOC_DAPM_AIF_OUT("AIF2ADCL", NULL, 0,
+		     WM8994_POWER_MANAGEMENT_4, 13, 0),
+SND_SOC_DAPM_AIF_OUT("AIF2ADCR", NULL, 0,
+		     WM8994_POWER_MANAGEMENT_4, 12, 0),
+SND_SOC_DAPM_AIF_IN_E("AIF2DACL", NULL, 0,
+		      WM8994_POWER_MANAGEMENT_5, 13, 0, wm8958_aif_ev,
+		      SND_SOC_DAPM_POST_PMU | SND_SOC_DAPM_PRE_PMD),
+SND_SOC_DAPM_AIF_IN_E("AIF2DACR", NULL, 0,
+		      WM8994_POWER_MANAGEMENT_5, 12, 0, wm8958_aif_ev,
+		      SND_SOC_DAPM_POST_PMU | SND_SOC_DAPM_PRE_PMD),
+
+SND_SOC_DAPM_AIF_IN("AIF1DACDAT", "AIF1 Playback", 0, SND_SOC_NOPM, 0, 0),
+SND_SOC_DAPM_AIF_IN("AIF2DACDAT", "AIF2 Playback", 0, SND_SOC_NOPM, 0, 0),
+SND_SOC_DAPM_AIF_OUT("AIF1ADCDAT", "AIF1 Capture", 0, SND_SOC_NOPM, 0, 0),
+SND_SOC_DAPM_AIF_OUT("AIF2ADCDAT", "AIF2 Capture", 0, SND_SOC_NOPM, 0, 0),
+
+SND_SOC_DAPM_MUX("AIF1DAC Mux", SND_SOC_NOPM, 0, 0, &aif1dac_mux),
+SND_SOC_DAPM_MUX("AIF2DAC Mux", SND_SOC_NOPM, 0, 0, &aif2dac_mux),
+SND_SOC_DAPM_MUX("AIF2ADC Mux", SND_SOC_NOPM, 0, 0, &aif2adc_mux),
+
+SND_SOC_DAPM_AIF_IN("AIF3DACDAT", "AIF3 Playback", 0, SND_SOC_NOPM, 0, 0),
+SND_SOC_DAPM_AIF_OUT("AIF3ADCDAT", "AIF3 Capture", 0, SND_SOC_NOPM, 0, 0),
+
+SND_SOC_DAPM_SUPPLY("TOCLK", WM8994_CLOCKING_1, 4, 0, NULL, 0),
+
+SND_SOC_DAPM_ADC("DMIC2L", NULL, WM8994_POWER_MANAGEMENT_4, 5, 0),
+SND_SOC_DAPM_ADC("DMIC2R", NULL, WM8994_POWER_MANAGEMENT_4, 4, 0),
+SND_SOC_DAPM_ADC("DMIC1L", NULL, WM8994_POWER_MANAGEMENT_4, 3, 0),
+SND_SOC_DAPM_ADC("DMIC1R", NULL, WM8994_POWER_MANAGEMENT_4, 2, 0),
+
+/* Power is done with the muxes since the ADC power also controls the
+ * downsampling chain, the chip will automatically manage the analogue
+ * specific portions.
+ */
+SND_SOC_DAPM_ADC("ADCL", NULL, SND_SOC_NOPM, 1, 0),
+SND_SOC_DAPM_ADC("ADCR", NULL, SND_SOC_NOPM, 0, 0),
+
+SND_SOC_DAPM_POST("Debug log", post_ev),
+};
+
+static const struct snd_soc_dapm_widget wm8994_specific_dapm_widgets[] = {
+SND_SOC_DAPM_MUX("AIF3ADC Mux", SND_SOC_NOPM, 0, 0, &wm8994_aif3adc_mux),
+};
+
+static const struct snd_soc_dapm_widget wm8958_dapm_widgets[] = {
+SND_SOC_DAPM_MUX("Mono PCM Out Mux", SND_SOC_NOPM, 0, 0, &mono_pcm_out_mux),
+SND_SOC_DAPM_MUX("AIF2DACL Mux", SND_SOC_NOPM, 0, 0, &aif2dacl_src_mux),
+SND_SOC_DAPM_MUX("AIF2DACR Mux", SND_SOC_NOPM, 0, 0, &aif2dacr_src_mux),
+SND_SOC_DAPM_MUX("AIF3ADC Mux", SND_SOC_NOPM, 0, 0, &wm8958_aif3adc_mux),
+};
+
+static const struct snd_soc_dapm_route intercon[] = {
+	{ "CLK_SYS", NULL, "AIF1CLK", check_clk_sys },
+	{ "CLK_SYS", NULL, "AIF2CLK", check_clk_sys },
+
+	{ "DSP1CLK", NULL, "CLK_SYS" },
+	{ "DSP2CLK", NULL, "CLK_SYS" },
+	{ "DSPINTCLK", NULL, "CLK_SYS" },
+
+	{ "AIF1ADC1L", NULL, "AIF1CLK" },
+	{ "AIF1ADC1L", NULL, "DSP1CLK" },
+	{ "AIF1ADC1R", NULL, "AIF1CLK" },
+	{ "AIF1ADC1R", NULL, "DSP1CLK" },
+	{ "AIF1ADC1R", NULL, "DSPINTCLK" },
+
+	{ "AIF1DAC1L", NULL, "AIF1CLK" },
+	{ "AIF1DAC1L", NULL, "DSP1CLK" },
+	{ "AIF1DAC1R", NULL, "AIF1CLK" },
+	{ "AIF1DAC1R", NULL, "DSP1CLK" },
+	{ "AIF1DAC1R", NULL, "DSPINTCLK" },
+
+	{ "AIF1ADC2L", NULL, "AIF1CLK" },
+	{ "AIF1ADC2L", NULL, "DSP1CLK" },
+	{ "AIF1ADC2R", NULL, "AIF1CLK" },
+	{ "AIF1ADC2R", NULL, "DSP1CLK" },
+	{ "AIF1ADC2R", NULL, "DSPINTCLK" },
+
+	{ "AIF1DAC2L", NULL, "AIF1CLK" },
+	{ "AIF1DAC2L", NULL, "DSP1CLK" },
+	{ "AIF1DAC2R", NULL, "AIF1CLK" },
+	{ "AIF1DAC2R", NULL, "DSP1CLK" },
+	{ "AIF1DAC2R", NULL, "DSPINTCLK" },
+
+	{ "AIF2ADCL", NULL, "AIF2CLK" },
+	{ "AIF2ADCL", NULL, "DSP2CLK" },
+	{ "AIF2ADCR", NULL, "AIF2CLK" },
+	{ "AIF2ADCR", NULL, "DSP2CLK" },
+	{ "AIF2ADCR", NULL, "DSPINTCLK" },
+
+	{ "AIF2DACL", NULL, "AIF2CLK" },
+	{ "AIF2DACL", NULL, "DSP2CLK" },
+	{ "AIF2DACR", NULL, "AIF2CLK" },
+	{ "AIF2DACR", NULL, "DSP2CLK" },
+	{ "AIF2DACR", NULL, "DSPINTCLK" },
+
+	{ "DMIC1L", NULL, "DMIC1DAT" },
+	{ "DMIC1L", NULL, "CLK_SYS" },
+	{ "DMIC1R", NULL, "DMIC1DAT" },
+	{ "DMIC1R", NULL, "CLK_SYS" },
+	{ "DMIC2L", NULL, "DMIC2DAT" },
+	{ "DMIC2L", NULL, "CLK_SYS" },
+	{ "DMIC2R", NULL, "DMIC2DAT" },
+	{ "DMIC2R", NULL, "CLK_SYS" },
+
+	{ "ADCL", NULL, "AIF1CLK" },
+	{ "ADCL", NULL, "DSP1CLK" },
+	{ "ADCL", NULL, "DSPINTCLK" },
+
+	{ "ADCR", NULL, "AIF1CLK" },
+	{ "ADCR", NULL, "DSP1CLK" },
+	{ "ADCR", NULL, "DSPINTCLK" },
+
+	{ "ADCL Mux", "ADC", "ADCL" },
+	{ "ADCL Mux", "DMIC", "DMIC1L" },
+	{ "ADCR Mux", "ADC", "ADCR" },
+	{ "ADCR Mux", "DMIC", "DMIC1R" },
+
+	{ "DAC1L", NULL, "AIF1CLK" },
+	{ "DAC1L", NULL, "DSP1CLK" },
+	{ "DAC1L", NULL, "DSPINTCLK" },
+
+	{ "DAC1R", NULL, "AIF1CLK" },
+	{ "DAC1R", NULL, "DSP1CLK" },
+	{ "DAC1R", NULL, "DSPINTCLK" },
+
+	{ "DAC2L", NULL, "AIF2CLK" },
+	{ "DAC2L", NULL, "DSP2CLK" },
+	{ "DAC2L", NULL, "DSPINTCLK" },
+
+	{ "DAC2R", NULL, "AIF2DACR" },
+	{ "DAC2R", NULL, "AIF2CLK" },
+	{ "DAC2R", NULL, "DSP2CLK" },
+	{ "DAC2R", NULL, "DSPINTCLK" },
+
+	{ "TOCLK", NULL, "CLK_SYS" },
+
+	/* AIF1 outputs */
+	{ "AIF1ADC1L", NULL, "AIF1ADC1L Mixer" },
+	{ "AIF1ADC1L Mixer", "ADC/DMIC Switch", "ADCL Mux" },
+	{ "AIF1ADC1L Mixer", "AIF2 Switch", "AIF2DACL" },
+
+	{ "AIF1ADC1R", NULL, "AIF1ADC1R Mixer" },
+	{ "AIF1ADC1R Mixer", "ADC/DMIC Switch", "ADCR Mux" },
+	{ "AIF1ADC1R Mixer", "AIF2 Switch", "AIF2DACR" },
+
+	{ "AIF1ADC2L", NULL, "AIF1ADC2L Mixer" },
+	{ "AIF1ADC2L Mixer", "DMIC Switch", "DMIC2L" },
+	{ "AIF1ADC2L Mixer", "AIF2 Switch", "AIF2DACL" },
+
+	{ "AIF1ADC2R", NULL, "AIF1ADC2R Mixer" },
+	{ "AIF1ADC2R Mixer", "DMIC Switch", "DMIC2R" },
+	{ "AIF1ADC2R Mixer", "AIF2 Switch", "AIF2DACR" },
+
+	/* Pin level routing for AIF3 */
+	{ "AIF1DAC1L", NULL, "AIF1DAC Mux" },
+	{ "AIF1DAC1R", NULL, "AIF1DAC Mux" },
+	{ "AIF1DAC2L", NULL, "AIF1DAC Mux" },
+	{ "AIF1DAC2R", NULL, "AIF1DAC Mux" },
+
+	{ "AIF1DAC Mux", "AIF1DACDAT", "AIF1DACDAT" },
+	{ "AIF1DAC Mux", "AIF3DACDAT", "AIF3DACDAT" },
+	{ "AIF2DAC Mux", "AIF2DACDAT", "AIF2DACDAT" },
+	{ "AIF2DAC Mux", "AIF3DACDAT", "AIF3DACDAT" },
+	{ "AIF2ADC Mux", "AIF2ADCDAT", "AIF2ADCL" },
+	{ "AIF2ADC Mux", "AIF2ADCDAT", "AIF2ADCR" },
+	{ "AIF2ADC Mux", "AIF3DACDAT", "AIF3ADCDAT" },
+
+	/* DAC1 inputs */
+	{ "DAC1L Mixer", "AIF2 Switch", "AIF2DACL" },
+	{ "DAC1L Mixer", "AIF1.2 Switch", "AIF1DAC2L" },
+	{ "DAC1L Mixer", "AIF1.1 Switch", "AIF1DAC1L" },
+	{ "DAC1L Mixer", "Left Sidetone Switch", "Left Sidetone" },
+	{ "DAC1L Mixer", "Right Sidetone Switch", "Right Sidetone" },
+
+	{ "DAC1R Mixer", "AIF2 Switch", "AIF2DACR" },
+	{ "DAC1R Mixer", "AIF1.2 Switch", "AIF1DAC2R" },
+	{ "DAC1R Mixer", "AIF1.1 Switch", "AIF1DAC1R" },
+	{ "DAC1R Mixer", "Left Sidetone Switch", "Left Sidetone" },
+	{ "DAC1R Mixer", "Right Sidetone Switch", "Right Sidetone" },
+
+	/* DAC2/AIF2 outputs  */
+	{ "AIF2ADCL", NULL, "AIF2DAC2L Mixer" },
+	{ "AIF2DAC2L Mixer", "AIF2 Switch", "AIF2DACL" },
+	{ "AIF2DAC2L Mixer", "AIF1.2 Switch", "AIF1DAC2L" },
+	{ "AIF2DAC2L Mixer", "AIF1.1 Switch", "AIF1DAC1L" },
+	{ "AIF2DAC2L Mixer", "Left Sidetone Switch", "Left Sidetone" },
+	{ "AIF2DAC2L Mixer", "Right Sidetone Switch", "Right Sidetone" },
+
+	{ "AIF2ADCR", NULL, "AIF2DAC2R Mixer" },
+	{ "AIF2DAC2R Mixer", "AIF2 Switch", "AIF2DACR" },
+	{ "AIF2DAC2R Mixer", "AIF1.2 Switch", "AIF1DAC2R" },
+	{ "AIF2DAC2R Mixer", "AIF1.1 Switch", "AIF1DAC1R" },
+	{ "AIF2DAC2R Mixer", "Left Sidetone Switch", "Left Sidetone" },
+	{ "AIF2DAC2R Mixer", "Right Sidetone Switch", "Right Sidetone" },
+
+	{ "AIF1ADCDAT", NULL, "AIF1ADC1L" },
+	{ "AIF1ADCDAT", NULL, "AIF1ADC1R" },
+	{ "AIF1ADCDAT", NULL, "AIF1ADC2L" },
+	{ "AIF1ADCDAT", NULL, "AIF1ADC2R" },
+
+	{ "AIF2ADCDAT", NULL, "AIF2ADC Mux" },
+
+	/* AIF3 output */
+	{ "AIF3ADCDAT", "AIF1ADCDAT", "AIF1ADC1L" },
+	{ "AIF3ADCDAT", "AIF1ADCDAT", "AIF1ADC1R" },
+	{ "AIF3ADCDAT", "AIF1ADCDAT", "AIF1ADC2L" },
+	{ "AIF3ADCDAT", "AIF1ADCDAT", "AIF1ADC2R" },
+	{ "AIF3ADCDAT", "AIF2ADCDAT", "AIF2ADCL" },
+	{ "AIF3ADCDAT", "AIF2ADCDAT", "AIF2ADCR" },
+	{ "AIF3ADCDAT", "AIF2DACDAT", "AIF2DACL" },
+	{ "AIF3ADCDAT", "AIF2DACDAT", "AIF2DACR" },
+
+	/* Sidetone */
+	{ "Left Sidetone", "ADC/DMIC1", "ADCL Mux" },
+	{ "Left Sidetone", "DMIC2", "DMIC2L" },
+	{ "Right Sidetone", "ADC/DMIC1", "ADCR Mux" },
+	{ "Right Sidetone", "DMIC2", "DMIC2R" },
+
+	/* Output stages */
+	{ "Left Output Mixer", "DAC Switch", "DAC1L" },
+	{ "Right Output Mixer", "DAC Switch", "DAC1R" },
+
+	{ "SPKL", "DAC1 Switch", "DAC1L" },
+	{ "SPKL", "DAC2 Switch", "DAC2L" },
+
+	{ "SPKR", "DAC1 Switch", "DAC1R" },
+	{ "SPKR", "DAC2 Switch", "DAC2R" },
+
+	{ "Left Headphone Mux", "DAC", "DAC1L" },
+	{ "Right Headphone Mux", "DAC", "DAC1R" },
+};
+
+static const struct snd_soc_dapm_route wm8994_lateclk_revd_intercon[] = {
+	{ "DAC1L", NULL, "Late DAC1L Enable PGA" },
+	{ "Late DAC1L Enable PGA", NULL, "DAC1L Mixer" },
+	{ "DAC1R", NULL, "Late DAC1R Enable PGA" },
+	{ "Late DAC1R Enable PGA", NULL, "DAC1R Mixer" },
+	{ "DAC2L", NULL, "Late DAC2L Enable PGA" },
+	{ "Late DAC2L Enable PGA", NULL, "AIF2DAC2L Mixer" },
+	{ "DAC2R", NULL, "Late DAC2R Enable PGA" },
+	{ "Late DAC2R Enable PGA", NULL, "AIF2DAC2R Mixer" }
+>>>>>>> v3.1.9
 };
 
 static const struct snd_soc_dapm_route audio_map[] = {
@@ -1237,6 +1572,7 @@ static int wm8994_hw_params(struct snd_pcm_substream *substream,
 		wm8994_write(codec, WM8994_AIF1_BCLK, 0x70);
 #endif
 
+<<<<<<< HEAD
 //TODO...we need to set proper BCLK & LRCLK to support different frequency songs..In modifying
 //BCLK & LRCLK , its giving noisy and improper frequency sound..this has to be checked
 #ifndef CONFIG_SND_S5P_WM8994_MASTER
@@ -1246,6 +1582,18 @@ static int wm8994_hw_params(struct snd_pcm_substream *substream,
 #endif
 	wm8994_write(codec, WM8994_AIF1_RATE, clocking3);
 	wm8994_write(codec, WM8994_AIF1_CONTROL_1, aif1);
+=======
+	switch (dai->id) {
+	case 1:
+		rate_reg = WM8994_AIF1_RATE;
+		break;
+	case 2:
+		rate_reg = WM8994_AIF2_RATE;
+		break;
+	default:
+		break;
+	}
+>>>>>>> v3.1.9
 
 	return 0;
 }

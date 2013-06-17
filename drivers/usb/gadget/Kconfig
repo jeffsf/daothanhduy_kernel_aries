@@ -552,6 +552,7 @@ config USB_GADGET_LANGWELL
 	   dynamically linked module called "langwell_udc" and force all
 	   gadget drivers to also be dynamically linked.
 
+<<<<<<< HEAD
 config USB_LANGWELL
 	tristate
 	depends on USB_GADGET_LANGWELL
@@ -560,6 +561,10 @@ config USB_LANGWELL
 
 config USB_GADGET_EG20T
 	tristate "Intel EG20T PCH/OKI SEMICONDUCTOR IOH(ML7213/ML7831) UDC"
+=======
+config USB_EG20T
+	tristate "Intel EG20T PCH/LAPIS Semiconductor IOH(ML7213/ML7831) UDC"
+>>>>>>> v3.1.9
 	depends on PCI
 	select USB_GADGET_DUALSPEED
 	help
@@ -575,7 +580,7 @@ config USB_GADGET_EG20T
 	  This driver dose not support interrupt transfer or isochronous
 	  transfer modes.
 
-	  This driver also can be used for OKI SEMICONDUCTOR's ML7213 which is
+	  This driver also can be used for LAPIS Semiconductor's ML7213 which is
 	  for IVI(In-Vehicle Infotainment) use.
 	  ML7831 is for general purpose use.
 	  ML7213/ML7831 is companion chip for Intel Atom E6xx series.

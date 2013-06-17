@@ -710,8 +710,13 @@ static struct rt6_info *rt6_alloc_cow(struct rt6_info *ort, const struct in6_add
 		int attempts = !in_softirq();
 
 		if (!(rt->rt6i_flags&RTF_GATEWAY)) {
+<<<<<<< HEAD
 			if (rt->rt6i_dst.plen != 128 &&
 			    ipv6_addr_equal(&rt->rt6i_dst.addr, daddr))
+=======
+			if (ort->rt6i_dst.plen != 128 &&
+			    ipv6_addr_equal(&ort->rt6i_dst.addr, daddr))
+>>>>>>> v3.1.9
 				rt->rt6i_flags |= RTF_ANYCAST;
 			ipv6_addr_copy(&rt->rt6i_gateway, daddr);
 		}
@@ -1071,8 +1076,15 @@ struct dst_entry *icmp6_dst_alloc(struct net_device *dev,
 	rt->rt6i_idev     = idev;
 	dst_set_neighbour(&rt->dst, neigh);
 	atomic_set(&rt->dst.__refcnt, 1);
+<<<<<<< HEAD
 	dst_metric_set(&rt->dst, RTAX_HOPLIMIT, 0);
 	rt->dst.output  = ip6_output;
+=======
+	ipv6_addr_copy(&rt->rt6i_dst.addr, addr);
+	rt->rt6i_dst.plen = 128;
+	rt->rt6i_idev     = idev;
+	dst_metric_set(&rt->dst, RTAX_HOPLIMIT, 255);
+>>>>>>> v3.1.9
 
 	spin_lock_bh(&icmp6_dst_lock);
 	rt->dst.next = icmp6_dst_gc_list;

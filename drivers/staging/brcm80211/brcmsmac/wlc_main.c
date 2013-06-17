@@ -6112,6 +6112,14 @@ prep_mac80211_status(struct wlc_info *wlc, d11rxhdr_t *rxh, struct sk_buff *p,
 			wiphy_err(wlc->wiphy, "%s: Unknown rate\n", __func__);
 		}
 
+		/*
+		 * For 5GHz, we should decrease the index as it is
+		 * a subset of the 2.4G rates. See bitrates field
+		 * of brcms_band_5GHz_nphy (in mac80211_if.c).
+		 */
+		if (rx_status->band == IEEE80211_BAND_5GHZ)
+			rx_status->rate_idx -= BRCMS_LEGACY_5G_RATE_OFFSET;
+
 		/* Determine short preamble and rate_idx */
 		preamble = 0;
 		if (IS_CCK(rspec)) {

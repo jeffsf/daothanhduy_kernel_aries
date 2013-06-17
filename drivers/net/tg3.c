@@ -5811,11 +5811,17 @@ static void tg3_skb_error_unmap(struct tg3_napi *tnapi,
 
 /* Workaround 4GB and 40-bit hardware DMA bugs. */
 static int tigon3_dma_hwbug_workaround(struct tg3_napi *tnapi,
+<<<<<<< HEAD
 				       struct sk_buff *skb,
 				       u32 base_flags, u32 mss)
+=======
+				       struct sk_buff **pskb,
+				       u32 *entry, u32 *budget,
+				       u32 base_flags, u32 mss, u32 vlan)
+>>>>>>> v3.1.9
 {
 	struct tg3 *tp = tnapi->tp;
-	struct sk_buff *new_skb;
+	struct sk_buff *new_skb, *skb = *pskb;
 	dma_addr_t new_addr = 0;
 	u32 entry = tnapi->tx_prod;
 	int ret = 0;
@@ -5861,7 +5867,7 @@ static int tigon3_dma_hwbug_workaround(struct tg3_napi *tnapi,
 	}
 
 	dev_kfree_skb(skb);
-
+	*pskb = new_skb;
 	return ret;
 }
 
@@ -6105,7 +6111,14 @@ static netdev_tx_t tg3_start_xmit(struct sk_buff *skb, struct net_device *dev)
 		/* If the workaround fails due to memory/mapping
 		 * failure, silently drop this packet.
 		 */
+<<<<<<< HEAD
 		if (tigon3_dma_hwbug_workaround(tnapi, skb, base_flags, mss))
+=======
+		entry = tnapi->tx_prod;
+		budget = tg3_tx_avail(tnapi);
+		if (tigon3_dma_hwbug_workaround(tnapi, &skb, &entry, &budget,
+						base_flags, mss, vlan))
+>>>>>>> v3.1.9
 			goto out_unlock;
 
 		entry = NEXT_TX(tnapi->tx_prod);

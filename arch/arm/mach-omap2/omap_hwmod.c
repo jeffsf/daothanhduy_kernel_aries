@@ -678,6 +678,128 @@ static void _disable_optional_clocks(struct omap_hwmod *oh)
 }
 
 /**
+<<<<<<< HEAD
+=======
+ * _enable_module - enable CLKCTRL modulemode on OMAP4
+ * @oh: struct omap_hwmod *
+ *
+ * Enables the PRCM module mode related to the hwmod @oh.
+ * No return value.
+ */
+static void _enable_module(struct omap_hwmod *oh)
+{
+	/* The module mode does not exist prior OMAP4 */
+	if (cpu_is_omap24xx() || cpu_is_omap34xx())
+		return;
+
+	if (!oh->clkdm || !oh->prcm.omap4.modulemode)
+		return;
+
+	pr_debug("omap_hwmod: %s: _enable_module: %d\n",
+		 oh->name, oh->prcm.omap4.modulemode);
+
+	omap4_cminst_module_enable(oh->prcm.omap4.modulemode,
+				   oh->clkdm->prcm_partition,
+				   oh->clkdm->cm_inst,
+				   oh->clkdm->clkdm_offs,
+				   oh->prcm.omap4.clkctrl_offs);
+}
+
+/**
+ * _disable_module - enable CLKCTRL modulemode on OMAP4
+ * @oh: struct omap_hwmod *
+ *
+ * Disable the PRCM module mode related to the hwmod @oh.
+ * No return value.
+ */
+static void _disable_module(struct omap_hwmod *oh)
+{
+	/* The module mode does not exist prior OMAP4 */
+	if (cpu_is_omap24xx() || cpu_is_omap34xx())
+		return;
+
+	if (!oh->clkdm || !oh->prcm.omap4.modulemode)
+		return;
+
+	pr_debug("omap_hwmod: %s: _disable_module\n", oh->name);
+
+	omap4_cminst_module_disable(oh->clkdm->prcm_partition,
+				    oh->clkdm->cm_inst,
+				    oh->clkdm->clkdm_offs,
+				    oh->prcm.omap4.clkctrl_offs);
+}
+
+/**
+ * _count_mpu_irqs - count the number of MPU IRQ lines associated with @oh
+ * @oh: struct omap_hwmod *oh
+ *
+ * Count and return the number of MPU IRQs associated with the hwmod
+ * @oh.  Used to allocate struct resource data.  Returns 0 if @oh is
+ * NULL.
+ */
+static int _count_mpu_irqs(struct omap_hwmod *oh)
+{
+	struct omap_hwmod_irq_info *ohii;
+	int i = 0;
+
+	if (!oh || !oh->mpu_irqs)
+		return 0;
+
+	do {
+		ohii = &oh->mpu_irqs[i++];
+	} while (ohii->irq != -1);
+
+	return i-1;
+}
+
+/**
+ * _count_sdma_reqs - count the number of SDMA request lines associated with @oh
+ * @oh: struct omap_hwmod *oh
+ *
+ * Count and return the number of SDMA request lines associated with
+ * the hwmod @oh.  Used to allocate struct resource data.  Returns 0
+ * if @oh is NULL.
+ */
+static int _count_sdma_reqs(struct omap_hwmod *oh)
+{
+	struct omap_hwmod_dma_info *ohdi;
+	int i = 0;
+
+	if (!oh || !oh->sdma_reqs)
+		return 0;
+
+	do {
+		ohdi = &oh->sdma_reqs[i++];
+	} while (ohdi->dma_req != -1);
+
+	return i-1;
+}
+
+/**
+ * _count_ocp_if_addr_spaces - count the number of address space entries for @oh
+ * @oh: struct omap_hwmod *oh
+ *
+ * Count and return the number of address space ranges associated with
+ * the hwmod @oh.  Used to allocate struct resource data.  Returns 0
+ * if @oh is NULL.
+ */
+static int _count_ocp_if_addr_spaces(struct omap_hwmod_ocp_if *os)
+{
+	struct omap_hwmod_addr_space *mem;
+	int i = 0;
+
+	if (!os || !os->addr)
+		return 0;
+
+	do {
+		mem = &os->addr[i++];
+	} while (mem->pa_start != mem->pa_end);
+
+	return i-1;
+}
+
+/**
+>>>>>>> v3.1.9
  * _find_mpu_port_index - find hwmod OCP slave port ID intended for MPU use
  * @oh: struct omap_hwmod *
  *

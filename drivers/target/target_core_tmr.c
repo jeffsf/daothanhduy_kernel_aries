@@ -74,15 +74,22 @@ void core_tmr_release_req(
 	struct se_tmr_req *tmr)
 {
 	struct se_device *dev = tmr->tmr_dev;
+	unsigned long flags;
 
 	if (!dev) {
 		kmem_cache_free(se_tmr_req_cache, tmr);
 		return;
 	}
 
+<<<<<<< HEAD
 	spin_lock(&dev->se_tmr_lock);
 	list_del(&tmr->tmr_list);
 	spin_unlock(&dev->se_tmr_lock);
+=======
+	spin_lock_irqsave(&dev->se_tmr_lock, flags);
+	list_del(&tmr->tmr_list);
+	spin_unlock_irqrestore(&dev->se_tmr_lock, flags);
+>>>>>>> v3.1.9
 
 	kmem_cache_free(se_tmr_req_cache, tmr);
 }
@@ -107,20 +114,24 @@ static void core_tmr_handle_tas_abort(
 	transport_cmd_finish_abort(cmd, 0);
 }
 
-int core_tmr_lun_reset(
+static void core_tmr_drain_tmr_list(
 	struct se_device *dev,
 	struct se_tmr_req *tmr,
-	struct list_head *preempt_and_abort_list,
-	struct se_cmd *prout_cmd)
+	struct list_head *preempt_and_abort_list)
 {
+<<<<<<< HEAD
 	struct se_cmd *cmd;
 	struct se_queue_req *qr, *qr_tmp;
 	struct se_node_acl *tmr_nacl = NULL;
 	struct se_portal_group *tmr_tpg = NULL;
 	struct se_queue_obj *qobj = dev->dev_queue_obj;
+=======
+	LIST_HEAD(drain_tmr_list);
+>>>>>>> v3.1.9
 	struct se_tmr_req *tmr_p, *tmr_pp;
-	struct se_task *task, *task_tmp;
+	struct se_cmd *cmd;
 	unsigned long flags;
+<<<<<<< HEAD
 	int fe_count, state, tas;
 	/*
 	 * TASK_ABORTED status bit, this is configurable via ConfigFS
@@ -151,11 +162,17 @@ int core_tmr_lun_reset(
 	DEBUG_LR("LUN_RESET: %s starting for [%s], tas: %d\n",
 		(preempt_and_abort_list) ? "Preempt" : "TMR",
 		TRANSPORT(dev)->name, tas);
+=======
+>>>>>>> v3.1.9
 	/*
 	 * Release all pending and outgoing TMRs aside from the received
 	 * LUN_RESET tmr..
 	 */
+<<<<<<< HEAD
 	spin_lock(&dev->se_tmr_lock);
+=======
+	spin_lock_irqsave(&dev->se_tmr_lock, flags);
+>>>>>>> v3.1.9
 	list_for_each_entry_safe(tmr_p, tmr_pp, &dev->dev_tmr_list, tmr_list) {
 		/*
 		 * Allow the received TMR to return with FUNCTION_COMPLETE.
@@ -177,6 +194,7 @@ int core_tmr_lun_reset(
 		    (core_scsi3_check_cdb_abort_and_preempt(
 					preempt_and_abort_list, cmd) != 0))
 			continue;
+<<<<<<< HEAD
 		spin_unlock(&dev->se_tmr_lock);
 
 		spin_lock_irqsave(&T_TASK(cmd)->t_state_lock, flags);
@@ -200,6 +218,50 @@ int core_tmr_lun_reset(
 		spin_lock(&dev->se_tmr_lock);
 	}
 	spin_unlock(&dev->se_tmr_lock);
+=======
+
+		spin_lock(&cmd->t_state_lock);
+		if (!atomic_read(&cmd->t_transport_active)) {
+			spin_unlock(&cmd->t_state_lock);
+			continue;
+		}
+		if (cmd->t_state == TRANSPORT_ISTATE_PROCESSING) {
+			spin_unlock(&cmd->t_state_lock);
+			continue;
+		}
+		spin_unlock(&cmd->t_state_lock);
+
+		list_move_tail(&tmr_p->tmr_list, &drain_tmr_list);
+	}
+	spin_unlock_irqrestore(&dev->se_tmr_lock, flags);
+
+	while (!list_empty(&drain_tmr_list)) {
+		tmr = list_entry(drain_tmr_list.next, struct se_tmr_req, tmr_list);
+		list_del(&tmr->tmr_list);
+		cmd = tmr->task_cmd;
+
+		pr_debug("LUN_RESET: %s releasing TMR %p Function: 0x%02x,"
+			" Response: 0x%02x, t_state: %d\n",
+			(preempt_and_abort_list) ? "Preempt" : "", tmr,
+			tmr->function, tmr->response, cmd->t_state);
+
+		transport_cmd_finish_abort_tmr(cmd);
+	}
+}
+
+static void core_tmr_drain_task_list(
+	struct se_device *dev,
+	struct se_cmd *prout_cmd,
+	struct se_node_acl *tmr_nacl,
+	int tas,
+	struct list_head *preempt_and_abort_list)
+{
+	LIST_HEAD(drain_task_list);
+	struct se_cmd *cmd;
+	struct se_task *task, *task_tmp;
+	unsigned long flags;
+	int fe_count;
+>>>>>>> v3.1.9
 	/*
 	 * Complete outstanding struct se_task CDBs with TASK_ABORTED SAM status.
 	 * This is following sam4r17, section 5.6 Aborting commands, Table 38
@@ -250,9 +312,23 @@ int core_tmr_lun_reset(
 		if (prout_cmd == cmd)
 			continue;
 
-		list_del(&task->t_state_list);
+		list_move_tail(&task->t_state_list, &drain_task_list);
 		atomic_set(&task->task_state_active, 0);
-		spin_unlock_irqrestore(&dev->execute_task_lock, flags);
+		/*
+		 * Remove from task execute list before processing drain_task_list
+		 */
+		if (atomic_read(&task->task_execute_queue) != 0) {
+			list_del(&task->t_execute_list);
+			atomic_set(&task->task_execute_queue, 0);
+			atomic_dec(&dev->execute_tasks);
+		}
+	}
+	spin_unlock_irqrestore(&dev->execute_task_lock, flags);
+
+	while (!list_empty(&drain_task_list)) {
+		task = list_entry(drain_task_list.next, struct se_task, t_state_list);
+		list_del(&task->t_state_list);
+		cmd = task->task_se_cmd;
 
 		spin_lock_irqsave(&T_TASK(cmd)->t_state_lock, flags);
 		DEBUG_LR("LUN_RESET: %s cmd: %p task: %p"
@@ -289,12 +365,10 @@ int core_tmr_lun_reset(
 
 			atomic_set(&task->task_active, 0);
 			atomic_set(&task->task_stop, 0);
-		} else {
-			if (atomic_read(&task->task_execute_queue) != 0)
-				transport_remove_task_from_execute_queue(task, dev);
 		}
 		__transport_stop_task_timer(task, &flags);
 
+<<<<<<< HEAD
 		if (!(atomic_dec_and_test(&T_TASK(cmd)->t_task_cdbs_ex_left))) {
 			spin_unlock_irqrestore(
 					&T_TASK(cmd)->t_state_lock, flags);
@@ -303,6 +377,13 @@ int core_tmr_lun_reset(
 				atomic_read(&T_TASK(cmd)->t_task_cdbs_ex_left));
 
 			spin_lock_irqsave(&dev->execute_task_lock, flags);
+=======
+		if (!atomic_dec_and_test(&cmd->t_task_cdbs_ex_left)) {
+			spin_unlock_irqrestore(&cmd->t_state_lock, flags);
+			pr_debug("LUN_RESET: Skipping task: %p, dev: %p for"
+				" t_task_cdbs_ex_left: %d\n", task, dev,
+				atomic_read(&cmd->t_task_cdbs_ex_left));
+>>>>>>> v3.1.9
 			continue;
 		}
 		fe_count = atomic_read(&T_TASK(cmd)->t_fe_count);
@@ -311,23 +392,45 @@ int core_tmr_lun_reset(
 			DEBUG_LR("LUN_RESET: got t_transport_active = 1 for"
 				" task: %p, t_fe_count: %d dev: %p\n", task,
 				fe_count, dev);
+<<<<<<< HEAD
 			atomic_set(&T_TASK(cmd)->t_transport_aborted, 1);
 			spin_unlock_irqrestore(&T_TASK(cmd)->t_state_lock,
 						flags);
 			core_tmr_handle_tas_abort(tmr_nacl, cmd, tas, fe_count);
+=======
+			atomic_set(&cmd->t_transport_aborted, 1);
+			spin_unlock_irqrestore(&cmd->t_state_lock, flags);
+>>>>>>> v3.1.9
 
-			spin_lock_irqsave(&dev->execute_task_lock, flags);
+			core_tmr_handle_tas_abort(tmr_nacl, cmd, tas, fe_count);
 			continue;
 		}
 		DEBUG_LR("LUN_RESET: Got t_transport_active = 0 for task: %p,"
 			" t_fe_count: %d dev: %p\n", task, fe_count, dev);
+<<<<<<< HEAD
 		atomic_set(&T_TASK(cmd)->t_transport_aborted, 1);
 		spin_unlock_irqrestore(&T_TASK(cmd)->t_state_lock, flags);
 		core_tmr_handle_tas_abort(tmr_nacl, cmd, tas, fe_count);
+=======
+		atomic_set(&cmd->t_transport_aborted, 1);
+		spin_unlock_irqrestore(&cmd->t_state_lock, flags);
+>>>>>>> v3.1.9
 
-		spin_lock_irqsave(&dev->execute_task_lock, flags);
+		core_tmr_handle_tas_abort(tmr_nacl, cmd, tas, fe_count);
 	}
-	spin_unlock_irqrestore(&dev->execute_task_lock, flags);
+}
+
+static void core_tmr_drain_cmd_list(
+	struct se_device *dev,
+	struct se_cmd *prout_cmd,
+	struct se_node_acl *tmr_nacl,
+	int tas,
+	struct list_head *preempt_and_abort_list)
+{
+	LIST_HEAD(drain_cmd_list);
+	struct se_queue_obj *qobj = &dev->dev_queue_obj;
+	struct se_cmd *cmd, *tcmd;
+	unsigned long flags;
 	/*
 	 * Release all commands remaining in the struct se_device cmd queue.
 	 *
@@ -364,11 +467,33 @@ int core_tmr_lun_reset(
 		 */
 		if (prout_cmd == cmd)
 			continue;
+		/*
+		 * Skip direct processing of TRANSPORT_FREE_CMD_INTR for
+		 * HW target mode fabrics.
+		 */
+		spin_lock(&cmd->t_state_lock);
+		if (cmd->t_state == TRANSPORT_FREE_CMD_INTR) {
+			spin_unlock(&cmd->t_state_lock);
+			continue;
+		}
+		spin_unlock(&cmd->t_state_lock);
 
+<<<<<<< HEAD
 		atomic_dec(&T_TASK(cmd)->t_transport_queue_active);
 		atomic_dec(&qobj->queue_cnt);
 		list_del(&qr->qr_list);
 		spin_unlock_irqrestore(&qobj->cmd_queue_lock, flags);
+=======
+		atomic_set(&cmd->t_transport_queue_active, 0);
+		atomic_dec(&qobj->queue_cnt);
+		list_move_tail(&cmd->se_queue_node, &drain_cmd_list);
+	}
+	spin_unlock_irqrestore(&qobj->cmd_queue_lock, flags);
+
+	while (!list_empty(&drain_cmd_list)) {
+		cmd = list_entry(drain_cmd_list.next, struct se_cmd, se_queue_node);
+		list_del_init(&cmd->se_queue_node);
+>>>>>>> v3.1.9
 
 		state = qr->state;
 		kfree(qr);
@@ -388,10 +513,59 @@ int core_tmr_lun_reset(
 		transport_new_cmd_failure(cmd);
 
 		core_tmr_handle_tas_abort(tmr_nacl, cmd, tas,
+<<<<<<< HEAD
 				atomic_read(&T_TASK(cmd)->t_fe_count));
 		spin_lock_irqsave(&qobj->cmd_queue_lock, flags);
+=======
+				atomic_read(&cmd->t_fe_count));
+>>>>>>> v3.1.9
 	}
-	spin_unlock_irqrestore(&qobj->cmd_queue_lock, flags);
+}
+
+int core_tmr_lun_reset(
+        struct se_device *dev,
+        struct se_tmr_req *tmr,
+        struct list_head *preempt_and_abort_list,
+        struct se_cmd *prout_cmd)
+{
+	struct se_node_acl *tmr_nacl = NULL;
+	struct se_portal_group *tmr_tpg = NULL;
+	int tas;
+        /*
+	 * TASK_ABORTED status bit, this is configurable via ConfigFS
+	 * struct se_device attributes.  spc4r17 section 7.4.6 Control mode page
+	 *
+	 * A task aborted status (TAS) bit set to zero specifies that aborted
+	 * tasks shall be terminated by the device server without any response
+	 * to the application client. A TAS bit set to one specifies that tasks
+	 * aborted by the actions of an I_T nexus other than the I_T nexus on
+	 * which the command was received shall be completed with TASK ABORTED
+	 * status (see SAM-4).
+	 */
+	tas = dev->se_sub_dev->se_dev_attrib.emulate_tas;
+	/*
+	 * Determine if this se_tmr is coming from a $FABRIC_MOD
+	 * or struct se_device passthrough..
+	 */
+	if (tmr && tmr->task_cmd && tmr->task_cmd->se_sess) {
+		tmr_nacl = tmr->task_cmd->se_sess->se_node_acl;
+		tmr_tpg = tmr->task_cmd->se_sess->se_tpg;
+		if (tmr_nacl && tmr_tpg) {
+			pr_debug("LUN_RESET: TMR caller fabric: %s"
+				" initiator port %s\n",
+				tmr_tpg->se_tpg_tfo->get_fabric_name(),
+				tmr_nacl->initiatorname);
+		}
+	}
+	pr_debug("LUN_RESET: %s starting for [%s], tas: %d\n",
+		(preempt_and_abort_list) ? "Preempt" : "TMR",
+		dev->transport->name, tas);
+
+	core_tmr_drain_tmr_list(dev, tmr, preempt_and_abort_list);
+	core_tmr_drain_task_list(dev, prout_cmd, tmr_nacl, tas,
+				preempt_and_abort_list);
+	core_tmr_drain_cmd_list(dev, prout_cmd, tmr_nacl, tas,
+				preempt_and_abort_list);
 	/*
 	 * Clear any legacy SPC-2 reservation when called during
 	 * LOGICAL UNIT RESET
@@ -414,3 +588,4 @@ int core_tmr_lun_reset(
 			TRANSPORT(dev)->name);
 	return 0;
 }
+

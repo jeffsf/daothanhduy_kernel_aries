@@ -964,7 +964,15 @@ static struct ieee80211_channel wl_5ghz_nphy_chantable[] = {
 	.hw_value = (rate100m / 5), \
 }
 
+<<<<<<< HEAD:drivers/staging/brcm80211/brcmsmac/wl_mac80211.c
 static struct ieee80211_rate wl_legacy_ratetable[] = {
+=======
+/*
+ * The rate table is used for both 2.4G and 5G rates. The
+ * latter being a subset as it does not support CCK rates.
+ */
+static struct ieee80211_rate legacy_ratetable[] = {
+>>>>>>> v3.1.9:drivers/staging/brcm80211/brcmsmac/mac80211_if.c
 	RATE(10, 0),
 	RATE(20, IEEE80211_RATE_SHORT_PREAMBLE),
 	RATE(55, IEEE80211_RATE_SHORT_PREAMBLE),
@@ -1003,10 +1011,18 @@ static struct ieee80211_supported_band wl_band_2GHz_nphy = {
 
 static struct ieee80211_supported_band wl_band_5GHz_nphy = {
 	.band = IEEE80211_BAND_5GHZ,
+<<<<<<< HEAD:drivers/staging/brcm80211/brcmsmac/wl_mac80211.c
 	.channels = wl_5ghz_nphy_chantable,
 	.n_channels = ARRAY_SIZE(wl_5ghz_nphy_chantable),
 	.bitrates = wl_legacy_ratetable + 4,
 	.n_bitrates = ARRAY_SIZE(wl_legacy_ratetable) - 4,
+=======
+	.channels = brcms_5ghz_nphy_chantable,
+	.n_channels = ARRAY_SIZE(brcms_5ghz_nphy_chantable),
+	.bitrates = legacy_ratetable + BRCMS_LEGACY_5G_RATE_OFFSET,
+	.n_bitrates = ARRAY_SIZE(legacy_ratetable) -
+			BRCMS_LEGACY_5G_RATE_OFFSET,
+>>>>>>> v3.1.9:drivers/staging/brcm80211/brcmsmac/mac80211_if.c
 	.ht_cap = {
 		   /* use IEEE80211_HT_CAP_* from include/linux/ieee80211.h */
 		   .cap = IEEE80211_HT_CAP_GRN_FLD | IEEE80211_HT_CAP_SGI_20 | IEEE80211_HT_CAP_SGI_40 | IEEE80211_HT_CAP_40MHZ_INTOLERANT,	/* No 40 mhz yet */

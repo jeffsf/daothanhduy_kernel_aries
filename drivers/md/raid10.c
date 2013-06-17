@@ -1112,6 +1112,7 @@ static int raid10_add_disk(mddev_t *mddev, mdk_rdev_t *rdev)
 		mirror = rdev->saved_raid_disk;
 	else
 		mirror = first;
+<<<<<<< HEAD
 	for ( ; mirror <= last ; mirror++)
 		if ( !(p=conf->mirrors+mirror)->rdev) {
 
@@ -1128,6 +1129,14 @@ static int raid10_add_disk(mddev_t *mddev, mdk_rdev_t *rdev)
 				blk_queue_segment_boundary(mddev->queue,
 							   PAGE_CACHE_SIZE - 1);
 			}
+=======
+	for ( ; mirror <= last ; mirror++) {
+		mirror_info_t *p = &conf->mirrors[mirror];
+		if (p->recovery_disabled == mddev->recovery_disabled)
+			continue;
+		if (p->rdev)
+			continue;
+>>>>>>> v3.1.9
 
 			p->head_position = 0;
 			rdev->raid_disk = mirror;

@@ -14,8 +14,26 @@
  * CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  */
 
+<<<<<<< HEAD:drivers/staging/brcm80211/brcmsmac/wl_mac80211.h
 #ifndef _wl_mac80211_h_
 #define _wl_mac80211_h_
+=======
+#ifndef _BRCM_MAC80211_IF_H_
+#define _BRCM_MAC80211_IF_H_
+
+#include <linux/timer.h>
+#include <linux/interrupt.h>
+
+/*
+ * Starting index for 5G rates in the
+ * legacy rate table.
+ */
+#define BRCMS_LEGACY_5G_RATE_OFFSET	4
+
+/* softmac ioctl definitions */
+#define BRCMS_SET_SHORTSLOT_OVERRIDE		146
+
+>>>>>>> v3.1.9:drivers/staging/brcm80211/brcmsmac/mac80211_if.h
 
 /* BMAC Note: High-only driver is no longer working in softirq context as it needs to block and
  * sleep so perimeter lock has to be a semaphore instead of spinlock. This requires timers to be

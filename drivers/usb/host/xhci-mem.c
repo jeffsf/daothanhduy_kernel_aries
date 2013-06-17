@@ -188,7 +188,10 @@ static struct xhci_ring *xhci_ring_alloc(struct xhci_hcd *xhci,
 				prev = next;
 			}
 			goto fail;
+<<<<<<< HEAD
 		}
+=======
+>>>>>>> v3.1.9
 		xhci_link_segments(xhci, prev, next, link_trbs, isoc);
 
 		prev = next;

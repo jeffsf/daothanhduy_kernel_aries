@@ -1132,6 +1132,14 @@ err_notif:
 err_reg:
 	ib_unregister_device(&ibdev->ib_dev);
 
+<<<<<<< HEAD
+=======
+err_counter:
+	for (; i; --i)
+		if (ibdev->counters[i - 1] != -1)
+			mlx4_counter_free(ibdev->dev, ibdev->counters[i - 1]);
+
+>>>>>>> v3.1.9
 err_map:
 	iounmap(ibdev->uar_map);
 
@@ -1160,7 +1168,13 @@ static void mlx4_ib_remove(struct mlx4_dev *dev, void *ibdev_ptr)
 		ibdev->iboe.nb.notifier_call = NULL;
 	}
 	iounmap(ibdev->uar_map);
+<<<<<<< HEAD
 
+=======
+	for (p = 0; p < ibdev->num_ports; ++p)
+		if (ibdev->counters[p] != -1)
+			mlx4_counter_free(ibdev->dev, ibdev->counters[p]);
+>>>>>>> v3.1.9
 	mlx4_foreach_port(p, dev, MLX4_PORT_TYPE_IB)
 		mlx4_CLOSE_PORT(dev, p);
 

@@ -2728,3 +2728,12 @@ bool our_mnt(struct vfsmount *mnt)
 {
 	return check_mnt(mnt);
 }
+<<<<<<< HEAD
+=======
+EXPORT_SYMBOL(kern_unmount);
+
+bool our_mnt(struct vfsmount *mnt)
+{
+	return check_mnt(mnt);
+}
+>>>>>>> v3.1.9

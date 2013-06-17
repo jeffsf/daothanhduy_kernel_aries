@@ -32,10 +32,22 @@ struct inet_peer {
 	struct inet_peer __rcu	*avl_left, *avl_right;
 	struct inetpeer_addr	daddr;
 	__u32			avl_height;
+<<<<<<< HEAD
 	struct list_head	unused;
 	__u32			dtime;		/* the time of last use of not
 						 * referenced entries */
 	atomic_t		refcnt;
+=======
+
+	u32			metrics[RTAX_MAX];
+	u32			rate_tokens;	/* rate limiting for ICMP */
+	int			redirect_genid;
+	unsigned long		rate_last;
+	unsigned long		pmtu_expires;
+	u32			pmtu_orig;
+	u32			pmtu_learned;
+	struct inetpeer_addr_base redirect_learned;
+>>>>>>> v3.1.9
 	/*
 	 * Once inet_peer is queued for deletion (refcnt == -1), following fields
 	 * are not available: rid, ip_id_count, tcp_ts, tcp_ts_stamp, metrics

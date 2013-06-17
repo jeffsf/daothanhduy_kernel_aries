@@ -194,15 +194,49 @@ struct socket_packet {
 
 struct tt_local_entry {
 	uint8_t addr[ETH_ALEN];
+	struct hlist_node hash_entry;
 	unsigned long last_seen;
+<<<<<<< HEAD
 	char never_purge;
 	struct hlist_node hash_entry;
+=======
+	uint16_t flags;
+	atomic_t refcount;
+	struct rcu_head rcu;
+>>>>>>> v3.1.9
 };
 
 struct tt_global_entry {
 	uint8_t addr[ETH_ALEN];
+	struct hlist_node hash_entry; /* entry in the global table */
 	struct orig_node *orig_node;
+<<<<<<< HEAD
 	struct hlist_node hash_entry;
+=======
+	uint8_t ttvn;
+	uint16_t flags; /* only TT_GLOBAL_ROAM is used */
+	unsigned long roam_at; /* time at which TT_GLOBAL_ROAM was set */
+	atomic_t refcount;
+	struct rcu_head rcu;
+};
+
+struct tt_change_node {
+	struct list_head list;
+	struct tt_change change;
+};
+
+struct tt_req_node {
+	uint8_t addr[ETH_ALEN];
+	unsigned long issued_at;
+	struct list_head list;
+};
+
+struct tt_roam_node {
+	uint8_t addr[ETH_ALEN];
+	atomic_t counter;
+	unsigned long first_time;
+	struct list_head list;
+>>>>>>> v3.1.9
 };
 
 /**

@@ -121,9 +121,29 @@ extern struct device_attribute dev_attr_usbip_debug;
  *
  *
  */
+<<<<<<< HEAD
 
 /*
  * A basic header followed by other additional headers.
+=======
+#define USBIP_CMD_SUBMIT	0x0001
+#define USBIP_CMD_UNLINK	0x0002
+#define USBIP_RET_SUBMIT	0x0003
+#define USBIP_RET_UNLINK	0x0004
+
+#define USBIP_DIR_OUT	0x00
+#define USBIP_DIR_IN	0x01
+
+/**
+ * struct usbip_header_basic - data pertinent to every request
+ * @command: the usbip request type
+ * @seqnum: sequential number that identifies requests; incremented per
+ *	    connection
+ * @devid: specifies a remote USB device uniquely instead of busnum and devnum;
+ *	   in the stub driver, this value is ((busnum << 16) | devnum)
+ * @direction: direction of the transfer
+ * @ep: endpoint number
+>>>>>>> v3.1.9
  */
 struct usbip_header_basic {
 #define USBIP_CMD_SUBMIT	0x0001

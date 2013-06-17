@@ -207,11 +207,35 @@ static int tcm_loop_new_cmd_map(struct se_cmd *se_cmd)
 		mem_ptr = NULL;
 	}
 	/*
+<<<<<<< HEAD
 	 * Map the SG memory into struct se_mem->page linked list using the same
 	 * physical memory at sg->page_link.
 	 */
 	ret = transport_generic_map_mem_to_cmd(se_cmd, mem_ptr,
 			scsi_sg_count(sc), mem_bidi_ptr, sg_no_bidi);
+=======
+	 * Because some userspace code via scsi-generic do not memset their
+	 * associated read buffers, go ahead and do that here for type
+	 * SCF_SCSI_CONTROL_SG_IO_CDB.  Also note that this is currently
+	 * guaranteed to be a single SGL for SCF_SCSI_CONTROL_SG_IO_CDB
+	 * by target core in transport_generic_allocate_tasks() ->
+	 * transport_generic_cmd_sequencer().
+	 */
+	if (se_cmd->se_cmd_flags & SCF_SCSI_CONTROL_SG_IO_CDB &&
+	    se_cmd->data_direction == DMA_FROM_DEVICE) {
+		struct scatterlist *sg = scsi_sglist(sc);
+		unsigned char *buf = kmap(sg_page(sg)) + sg->offset;
+
+		if (buf != NULL) {
+			memset(buf, 0, sg->length);
+			kunmap(sg_page(sg));
+		}
+	}
+
+	/* Tell the core about our preallocated memory */
+	ret = transport_generic_map_mem_to_cmd(se_cmd, scsi_sglist(sc),
+			scsi_sg_count(sc), sgl_bidi, sgl_bidi_count);
+>>>>>>> v3.1.9
 	if (ret < 0)
 		return PYX_TRANSPORT_LU_COMM_FAILURE;
 

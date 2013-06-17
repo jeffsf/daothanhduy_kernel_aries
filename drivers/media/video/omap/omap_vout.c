@@ -38,6 +38,10 @@
 #include <linux/dma-mapping.h>
 #include <linux/irq.h>
 #include <linux/videodev2.h>
+<<<<<<< HEAD
+=======
+#include <linux/dma-mapping.h>
+>>>>>>> v3.1.9
 #include <linux/slab.h>
 
 #include <media/videobuf-dma-contig.h>

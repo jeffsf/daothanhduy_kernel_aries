@@ -3280,9 +3280,16 @@
 /* or SDVOB */
 #define HDMIB   0xe1140
 #define  PORT_ENABLE    (1 << 31)
+<<<<<<< HEAD
 #define  TRANSCODER_A   (0)
 #define  TRANSCODER_B   (1 << 30)
 #define  TRANSCODER_MASK   (1 << 30)
+=======
+#define  TRANSCODER(pipe)       ((pipe) << 30)
+#define  TRANSCODER_CPT(pipe)   ((pipe) << 29)
+#define  TRANSCODER_MASK        (1 << 30)
+#define  TRANSCODER_MASK_CPT    (3 << 29)
+>>>>>>> v3.1.9
 #define  COLOR_FORMAT_8bpc      (0)
 #define  COLOR_FORMAT_12bpc     (3 << 26)
 #define  SDVOB_HOTPLUG_ENABLE   (1 << 23)
@@ -3412,6 +3419,10 @@
 
 #define GEN6_UCGCTL2				0x9404
 # define GEN6_RCZUNIT_CLOCK_GATE_DISABLE		(1 << 13)
+# define GEN6_RCPBUNIT_CLOCK_GATE_DISABLE		(1 << 12)
+# define GEN6_RCCUNIT_CLOCK_GATE_DISABLE		(1 << 11)
+
+#define GEN6_UCGCTL2				0x9404
 # define GEN6_RCPBUNIT_CLOCK_GATE_DISABLE		(1 << 12)
 # define GEN6_RCCUNIT_CLOCK_GATE_DISABLE		(1 << 11)
 
