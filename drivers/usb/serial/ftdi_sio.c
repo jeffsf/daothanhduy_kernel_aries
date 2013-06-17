@@ -2141,12 +2141,9 @@ static void ftdi_set_termios(struct tty_struct *tty,
 
 	cflag = termios->c_cflag;
 
-<<<<<<< HEAD
 	if (!old_termios)
 		goto no_skip;
 
-=======
->>>>>>> v3.1.9
 	if (old_termios->c_cflag == termios->c_cflag
 	    && old_termios->c_ispeed == termios->c_ispeed
 	    && old_termios->c_ospeed == termios->c_ospeed)
@@ -2160,10 +2157,7 @@ static void ftdi_set_termios(struct tty_struct *tty,
 	    (termios->c_cflag & (CSIZE|PARODD|PARENB|CMSPAR|CSTOPB)))
 		goto no_data_parity_stop_changes;
 
-<<<<<<< HEAD
 no_skip:
-=======
->>>>>>> v3.1.9
 	/* Set number of data bits, parity, stop bits */
 
 	urb_value = 0;

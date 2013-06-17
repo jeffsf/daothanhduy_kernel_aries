@@ -1096,7 +1096,6 @@ _base_check_enable_msix(struct MPT2SAS_ADAPTER *ioc)
 	int base;
 	u16 message_control;
 
-<<<<<<< HEAD
 
 	/* Check whether controller SAS2008 B0 controller,
 	   if it is SAS2008 B0 controller use IO-APIC instead of MSIX */
@@ -1104,8 +1103,6 @@ _base_check_enable_msix(struct MPT2SAS_ADAPTER *ioc)
 	    ioc->pdev->revision == 0x01) {
 		return -EINVAL;
 	}
-=======
->>>>>>> v3.1.9
 
 	base = pci_find_capability(ioc->pdev, PCI_CAP_ID_MSIX);
 	if (!base) {

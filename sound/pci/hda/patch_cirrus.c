@@ -202,15 +202,6 @@ static int cs_dig_playback_pcm_cleanup(struct hda_pcm_stream *hinfo,
 	return snd_hda_multi_out_dig_cleanup(codec, &spec->multiout);
 }
 
-static void cs_update_input_select(struct hda_codec *codec)
-{
-	struct cs_spec *spec = codec->spec;
-	if (spec->cur_adc)
-		snd_hda_codec_write(codec, spec->cur_adc, 0,
-				    AC_VERB_SET_CONNECT_SEL,
-				    spec->adc_idx[spec->cur_input]);
-}
-
 /*
  * Analog capture
  */
@@ -224,7 +215,6 @@ static int cs_capture_pcm_prepare(struct hda_pcm_stream *hinfo,
 	spec->cur_adc = spec->adc_nid[spec->cur_input];
 	spec->cur_adc_stream_tag = stream_tag;
 	spec->cur_adc_format = format;
-	cs_update_input_select(codec);
 	snd_hda_codec_setup_stream(codec, spec->cur_adc, stream_tag, 0, format);
 	return 0;
 }
@@ -671,8 +661,10 @@ static int change_cur_input(struct hda_codec *codec, unsigned int idx,
 					   spec->cur_adc_stream_tag, 0,
 					   spec->cur_adc_format);
 	}
+	snd_hda_codec_write(codec, spec->cur_adc, 0,
+			    AC_VERB_SET_CONNECT_SEL,
+			    spec->adc_idx[idx]);
 	spec->cur_input = idx;
-	cs_update_input_select(codec);
 	return 1;
 }
 
@@ -891,29 +883,10 @@ static void cs_automic(struct hda_codec *codec)
 	
 	nid = cfg->inputs[spec->automic_idx].pin;
 	present = snd_hda_jack_detect(codec, nid);
-<<<<<<< HEAD
 	if (present)
 		change_cur_input(codec, spec->automic_idx, 0);
 	else
 		change_cur_input(codec, !spec->automic_idx, 0);
-=======
-
-	/* specific to CS421x, single ADC */
-	if (spec->vendor_nid == CS421X_VENDOR_NID) {
-		if (present) {
-			spec->last_input = spec->cur_input;
-			spec->cur_input = spec->automic_idx;
-		} else  {
-			spec->cur_input = spec->last_input;
-		}
-		cs_update_input_select(codec);
-	} else {
-		if (present)
-			change_cur_input(codec, spec->automic_idx, 0);
-		else
-			change_cur_input(codec, !spec->automic_idx, 0);
-	}
->>>>>>> v3.1.9
 }
 
 /*
@@ -993,7 +966,6 @@ static void init_input(struct hda_codec *codec)
 					    AC_VERB_SET_UNSOLICITED_ENABLE,
 					    AC_USRSP_EN | MIC_EVENT);
 	}
-<<<<<<< HEAD
 	change_cur_input(codec, spec->cur_input, 1);
 	if (spec->mic_detect)
 		cs_automic(codec);
@@ -1007,31 +979,6 @@ static void init_input(struct hda_codec *codec)
 				 * IDX_SPDIF_CTL.
 				  */
 	cs_vendor_coef_set(codec, IDX_ADC_CFG, coef);
-=======
-	/* specific to CS421x */
-	if (spec->vendor_nid == CS421X_VENDOR_NID) {
-		if (spec->mic_detect)
-			cs_automic(codec);
-		else  {
-			spec->cur_adc = spec->adc_nid[spec->cur_input];
-			cs_update_input_select(codec);
-		}
-	} else {
-		change_cur_input(codec, spec->cur_input, 1);
-		if (spec->mic_detect)
-			cs_automic(codec);
-
-		coef = 0x000a; /* ADC1/2 - Digital and Analog Soft Ramp */
-		if (is_active_pin(codec, CS_DMIC2_PIN_NID))
-			coef |= 0x0500; /* DMIC2 2 chan on, GPIO1 off */
-		if (is_active_pin(codec, CS_DMIC1_PIN_NID))
-			coef |= 0x1800; /* DMIC1 2 chan on, GPIO0 off
-					 * No effect if SPDIF_OUT2 is
-					 * selected in IDX_SPDIF_CTL.
-					*/
-		cs_vendor_coef_set(codec, IDX_ADC_CFG, coef);
-	}
->>>>>>> v3.1.9
 }
 
 static const struct hda_verb cs_coef_init_verbs[] = {

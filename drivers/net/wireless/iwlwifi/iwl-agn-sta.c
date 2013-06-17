@@ -507,23 +507,8 @@ int iwl_set_dynamic_key(struct iwl_priv *priv, struct iwl_rxon_context *ctx,
 		ret = iwl_set_ccmp_dynamic_key_info(priv, ctx, keyconf, sta_id);
 		break;
 	case WLAN_CIPHER_SUITE_TKIP:
-<<<<<<< HEAD
 		ret = iwl_set_tkip_dynamic_key_info(priv, ctx, keyconf, sta_id);
 		break;
-=======
-		if (sta)
-			addr = sta->addr;
-		else /* station mode case only */
-			addr = ctx->active.bssid_addr;
-
-		/* pre-fill phase 1 key into device cache */
-		ieee80211_get_key_rx_seq(keyconf, 0, &seq);
-		ieee80211_get_tkip_rx_p1k(keyconf, addr, seq.tkip.iv32, p1k);
-		ret = iwlagn_send_sta_key(priv, keyconf, sta_id,
-					  seq.tkip.iv32, p1k, CMD_SYNC);
-		break;
-	case WLAN_CIPHER_SUITE_CCMP:
->>>>>>> v3.1.9
 	case WLAN_CIPHER_SUITE_WEP40:
 	case WLAN_CIPHER_SUITE_WEP104:
 		ret = iwl_set_wep_dynamic_key_info(priv, ctx, keyconf, sta_id);

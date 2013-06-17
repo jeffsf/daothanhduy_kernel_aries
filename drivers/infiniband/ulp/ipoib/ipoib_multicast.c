@@ -271,15 +271,6 @@ static int ipoib_mcast_join_finish(struct ipoib_mcast *mcast,
 		netif_tx_unlock_bh(dev);
 
 		skb->dev = dev;
-<<<<<<< HEAD
-=======
-		if (dst)
-			n = dst_get_neighbour_raw(dst);
-		if (!dst || !n) {
-			/* put pseudoheader back on for next time */
-			skb_push(skb, sizeof (struct ipoib_pseudoheader));
-		}
->>>>>>> v3.1.9
 
 		if (dev_queue_xmit(skb))
 			ipoib_warn(priv, "dev_queue_xmit failed to requeue packet\n");

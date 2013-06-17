@@ -158,12 +158,7 @@ struct via_spec {
 	/* work to check hp jack state */
 	struct hda_codec *codec;
 	struct delayed_work vt1708_hp_work;
-<<<<<<< HEAD
 	int vt1708_jack_detectect;
-=======
-	int hp_work_active;
-	int vt1708_jack_detect;
->>>>>>> v3.1.9
 	int vt1708_hp_present;
 
 	void (*set_widgets_power_state)(struct hda_codec *codec);
@@ -263,52 +258,27 @@ enum {
 static void analog_low_current_mode(struct hda_codec *codec, int stream_idle);
 static int is_aa_path_mute(struct hda_codec *codec);
 
-#define hp_detect_with_aa(codec) \
-	(snd_hda_get_bool_hint(codec, "analog_loopback_hp_detect") == 1 && \
-	 !is_aa_path_mute(codec))
-
-static void vt1708_stop_hp_work(struct via_spec *spec)
+static void vt1708_start_hp_work(struct via_spec *spec)
 {
 	if (spec->codec_type != VT1708 || spec->autocfg.hp_pins[0] == 0)
 		return;
-<<<<<<< HEAD
 	snd_hda_codec_write(spec->codec, 0x1, 0, 0xf81,
 			    !spec->vt1708_jack_detectect);
 	if (!delayed_work_pending(&spec->vt1708_hp_work))
 		schedule_delayed_work(&spec->vt1708_hp_work,
 				      msecs_to_jiffies(100));
-=======
-	if (spec->hp_work_active) {
-		snd_hda_codec_write(spec->codec, 0x1, 0, 0xf81, 1);
-		cancel_delayed_work_sync(&spec->vt1708_hp_work);
-		spec->hp_work_active = 0;
-	}
->>>>>>> v3.1.9
 }
 
-static void vt1708_update_hp_work(struct via_spec *spec)
+static void vt1708_stop_hp_work(struct via_spec *spec)
 {
 	if (spec->codec_type != VT1708 || spec->autocfg.hp_pins[0] == 0)
 		return;
-<<<<<<< HEAD
 	if (snd_hda_get_bool_hint(spec->codec, "analog_loopback_hp_detect") == 1
 	    && !is_aa_path_mute(spec->codec))
 		return;
 	snd_hda_codec_write(spec->codec, 0x1, 0, 0xf81,
 			    !spec->vt1708_jack_detectect);
 	cancel_delayed_work_sync(&spec->vt1708_hp_work);
-=======
-	if (spec->vt1708_jack_detect &&
-	    (spec->active_streams || hp_detect_with_aa(spec->codec))) {
-		if (!spec->hp_work_active) {
-			snd_hda_codec_write(spec->codec, 0x1, 0, 0xf81, 0);
-			schedule_delayed_work(&spec->vt1708_hp_work,
-					      msecs_to_jiffies(100));
-			spec->hp_work_active = 1;
-		}
-	} else if (!hp_detect_with_aa(spec->codec))
-		vt1708_stop_hp_work(spec);
->>>>>>> v3.1.9
 }
 
 static void set_widgets_power_state(struct hda_codec *codec)
@@ -325,7 +295,6 @@ static int analog_input_switch_put(struct snd_kcontrol *kcontrol,
 	struct hda_codec *codec = snd_kcontrol_chip(kcontrol);
 
 	set_widgets_power_state(codec);
-<<<<<<< HEAD
 	analog_low_current_mode(snd_kcontrol_chip(kcontrol), -1);
 	if (snd_hda_get_bool_hint(codec, "analog_loopback_hp_detect") == 1) {
 		if (is_aa_path_mute(codec))
@@ -333,10 +302,6 @@ static int analog_input_switch_put(struct snd_kcontrol *kcontrol,
 		else
 			vt1708_stop_hp_work(codec->spec);
 	}
-=======
-	analog_low_current_mode(snd_kcontrol_chip(kcontrol));
-	vt1708_update_hp_work(codec->spec);
->>>>>>> v3.1.9
 	return change;
 }
 
@@ -1353,7 +1318,6 @@ static int via_playback_multi_pcm_prepare(struct hda_pcm_stream *hinfo,
 	struct hda_multi_out *mout = &spec->multiout;
 	const hda_nid_t *nids = mout->dac_nids;
 
-<<<<<<< HEAD
 	if (substream->number == 0)
 		playback_multi_pcm_prep_0(codec, stream_tag, format,
 					  substream);
@@ -1364,38 +1328,6 @@ static int via_playback_multi_pcm_prepare(struct hda_pcm_stream *hinfo,
 						   stream_tag, 0, format);
 	}
 	vt1708_start_hp_work(spec);
-=======
-	mutex_lock(&spec->config_mutex);
-	setup_playback_multi_pcm(spec);
-	snd_hda_multi_out_analog_prepare(codec, &spec->multiout, stream_tag,
-					 format, substream);
-	/* remember for dynamic DAC switch with indep-HP */
-	spec->active_streams |= STREAM_MULTI_OUT;
-	spec->cur_dac_stream_tag = stream_tag;
-	spec->cur_dac_format = format;
-	mutex_unlock(&spec->config_mutex);
-	vt1708_update_hp_work(spec);
-	return 0;
-}
-
-static int via_playback_hp_pcm_prepare(struct hda_pcm_stream *hinfo,
-				       struct hda_codec *codec,
-				       unsigned int stream_tag,
-				       unsigned int format,
-				       struct snd_pcm_substream *substream)
-{
-	struct via_spec *spec = codec->spec;
-
-	mutex_lock(&spec->config_mutex);
-	if (spec->hp_independent_mode)
-		snd_hda_codec_setup_stream(codec, spec->hp_dac_nid,
-					   stream_tag, 0, format);
-	spec->active_streams |= STREAM_INDEP_HP;
-	spec->cur_hp_stream_tag = stream_tag;
-	spec->cur_hp_format = format;
-	mutex_unlock(&spec->config_mutex);
-	vt1708_update_hp_work(spec);
->>>>>>> v3.1.9
 	return 0;
 }
 
@@ -1408,7 +1340,6 @@ static int via_playback_multi_pcm_cleanup(struct hda_pcm_stream *hinfo,
 	const hda_nid_t *nids = mout->dac_nids;
 	int i;
 
-<<<<<<< HEAD
 	if (substream->number == 0) {
 		for (i = 0; i < mout->num_dacs; i++)
 			snd_hda_codec_setup_stream(codec, nids[i], 0, 0, 0);
@@ -1437,28 +1368,6 @@ static int via_playback_multi_pcm_cleanup(struct hda_pcm_stream *hinfo,
 						   0, 0, 0);
 	}
 	vt1708_stop_hp_work(spec);
-=======
-	mutex_lock(&spec->config_mutex);
-	snd_hda_multi_out_analog_cleanup(codec, &spec->multiout);
-	spec->active_streams &= ~STREAM_MULTI_OUT;
-	mutex_unlock(&spec->config_mutex);
-	vt1708_update_hp_work(spec);
-	return 0;
-}
-
-static int via_playback_hp_pcm_cleanup(struct hda_pcm_stream *hinfo,
-				       struct hda_codec *codec,
-				       struct snd_pcm_substream *substream)
-{
-	struct via_spec *spec = codec->spec;
-
-	mutex_lock(&spec->config_mutex);
-	if (spec->hp_independent_mode)
-		snd_hda_codec_setup_stream(codec, spec->hp_dac_nid, 0, 0, 0);
-	spec->active_streams &= ~STREAM_INDEP_HP;
-	mutex_unlock(&spec->config_mutex);
-	vt1708_update_hp_work(spec);
->>>>>>> v3.1.9
 	return 0;
 }
 
@@ -1731,7 +1640,6 @@ static void via_mono_automute(struct hda_codec *codec)
 
 	lineout_present = snd_hda_jack_detect(codec,
 					      spec->autocfg.line_out_pins[0]);
-<<<<<<< HEAD
 
 	/* Mute Mono Out if Line Out is plugged */
 	if (lineout_present) {
@@ -1746,31 +1654,6 @@ static void via_mono_automute(struct hda_codec *codec)
 		snd_hda_codec_amp_stereo(
 			codec, 0x2A, HDA_OUTPUT, 0, HDA_AMP_MUTE,
 			hp_present ? HDA_AMP_MUTE : 0);
-=======
-	toggle_output_mutes(codec, spec->autocfg.speaker_outs,
-			    spec->autocfg.speaker_pins,
-			    present);
-}
-
-/* mute internal speaker if HP is plugged */
-static void via_hp_automute(struct hda_codec *codec)
-{
-	int present = 0;
-	int nums;
-	struct via_spec *spec = codec->spec;
-
-	if (!spec->hp_independent_mode && spec->autocfg.hp_pins[0] &&
-	    (spec->codec_type != VT1708 || spec->vt1708_jack_detect))
-		present = snd_hda_jack_detect(codec, spec->autocfg.hp_pins[0]);
-
-	if (spec->smart51_enabled)
-		nums = spec->autocfg.line_outs + spec->smart51_nums;
-	else
-		nums = spec->autocfg.line_outs;
-	toggle_output_mutes(codec, nums, spec->autocfg.line_out_pins, present);
-
-	via_line_automute(codec, present);
->>>>>>> v3.1.9
 }
 
 static void via_gpio_control(struct hda_codec *codec)
@@ -2747,12 +2630,6 @@ static int vt1709_auto_create_hp_ctls(struct via_spec *spec, hda_nid_t pin)
 	if (err < 0)
 		return err;
 
-<<<<<<< HEAD
-=======
-	if (spec->codec_type != VT1708)
-		return 0;
-	ucontrol->value.integer.value[0] = spec->vt1708_jack_detect;
->>>>>>> v3.1.9
 	return 0;
 }
 
@@ -2760,30 +2637,9 @@ static int vt1709_auto_create_hp_ctls(struct via_spec *spec, hda_nid_t pin)
 static int vt1709_auto_create_analog_input_ctls(struct hda_codec *codec,
 						const struct auto_pin_cfg *cfg)
 {
-<<<<<<< HEAD
 	static const hda_nid_t pin_idxs[] = { 0xff, 0x23, 0x1d, 0x1e, 0x21 };
 	return vt_auto_create_analog_input_ctls(codec, cfg, 0x18, pin_idxs,
 						ARRAY_SIZE(pin_idxs));
-=======
-	struct hda_codec *codec = snd_kcontrol_chip(kcontrol);
-	struct via_spec *spec = codec->spec;
-	int val;
-
-	if (spec->codec_type != VT1708)
-		return 0;
-	val = !!ucontrol->value.integer.value[0];
-	if (spec->vt1708_jack_detect == val)
-		return 0;
-	spec->vt1708_jack_detect = val;
-	if (spec->vt1708_jack_detect &&
-	    snd_hda_get_bool_hint(codec, "analog_loopback_hp_detect") != 1) {
-		mute_aa_path(codec, 1);
-		notify_aa_path_ctls(codec);
-	}
-	via_hp_automute(codec);
-	vt1708_update_hp_work(spec);
-	return 1;
->>>>>>> v3.1.9
 }
 
 static int vt1709_parse_auto_config(struct hda_codec *codec)
@@ -2881,16 +2737,11 @@ static int patch_vt1709_10ch(struct hda_codec *codec)
 
 	codec->patch_ops = via_patch_ops;
 
-<<<<<<< HEAD
 	codec->patch_ops.init = via_auto_init;
 	codec->patch_ops.unsol_event = via_unsol_event;
 #ifdef CONFIG_SND_HDA_POWER_SAVE
 	spec->loopback.amplist = vt1709_loopbacks;
 #endif
-=======
-	via_hp_automute(codec);
-	vt1708_update_hp_work(spec);
->>>>>>> v3.1.9
 
 	return 0;
 }
@@ -2905,25 +2756,6 @@ static const struct hda_verb vt1709_6ch_volume_init_verbs[] = {
 	{0x15, AC_VERB_SET_AMP_GAIN_MUTE, AMP_IN_UNMUTE(0)},
 	{0x16, AC_VERB_SET_AMP_GAIN_MUTE, AMP_IN_UNMUTE(0)},
 
-<<<<<<< HEAD
-=======
-static void vt1708_update_hp_jack_state(struct work_struct *work)
-{
-	struct via_spec *spec = container_of(work, struct via_spec,
-					     vt1708_hp_work.work);
-	if (spec->codec_type != VT1708)
-		return;
-	/* if jack state toggled */
-	if (spec->vt1708_hp_present
-	    != snd_hda_jack_detect(spec->codec, spec->autocfg.hp_pins[0])) {
-		spec->vt1708_hp_present ^= 1;
-		via_hp_automute(spec->codec);
-	}
-	if (spec->vt1708_jack_detect)
-		schedule_delayed_work(&spec->vt1708_hp_work,
-				      msecs_to_jiffies(100));
-}
->>>>>>> v3.1.9
 
 	/* Unmute input amps (CD, Line In, Mic 1 & Mic 2) of the analog-loopback
 	 * mixer widget

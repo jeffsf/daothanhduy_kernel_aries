@@ -1116,29 +1116,16 @@ static int __init omap2_mcspi_probe(struct platform_device *pdev)
 		status = -ENODEV;
 		goto err1;
 	}
-<<<<<<< HEAD:drivers/spi/omap2_mcspi.c
 	if (!request_mem_region(r->start, (r->end - r->start) + 1,
 			dev_name(&pdev->dev))) {
-=======
-
-	r->start += pdata->regs_offset;
-	r->end += pdata->regs_offset;
-	mcspi->phys = r->start;
-	if (!request_mem_region(r->start, resource_size(r),
-				dev_name(&pdev->dev))) {
->>>>>>> v3.1.9:drivers/spi/spi-omap2-mcspi.c
 		status = -EBUSY;
 		goto err1;
 	}
 
-<<<<<<< HEAD:drivers/spi/omap2_mcspi.c
 	r->start += pdata->regs_offset;
 	r->end += pdata->regs_offset;
 	mcspi->phys = r->start;
 	mcspi->base = ioremap(r->start, r->end - r->start + 1);
-=======
-	mcspi->base = ioremap(r->start, resource_size(r));
->>>>>>> v3.1.9:drivers/spi/spi-omap2-mcspi.c
 	if (!mcspi->base) {
 		dev_dbg(&pdev->dev, "can't ioremap MCSPI\n");
 		status = -ENOMEM;

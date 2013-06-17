@@ -2356,14 +2356,6 @@ struct dvb_frontend *dib7000p_attach(struct i2c_adapter *i2c_adap, u8 i2c_addr, 
 	st->version = dib7000p_read_word(st, 897);
 
 	/* FIXME: make sure the dev.parent field is initialized, or else
-<<<<<<< HEAD
-=======
-	   request_firmware() will hit an OOPS (this should be moved somewhere
-	   more common) */
-	st->i2c_master.gated_tuner_i2c_adap.dev.parent = i2c_adap->dev.parent;
-
-	/* FIXME: make sure the dev.parent field is initialized, or else
->>>>>>> v3.1.9
 	   request_firmware() will hit an OOPS (this should be moved somewhere
 	   more common) */
 	st->i2c_master.gated_tuner_i2c_adap.dev.parent = i2c_adap->dev.parent;

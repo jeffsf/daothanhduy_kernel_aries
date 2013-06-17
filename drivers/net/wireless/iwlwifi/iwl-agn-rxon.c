@@ -263,15 +263,6 @@ static int iwlagn_rxon_connect(struct iwl_priv *priv,
 		IWL_ERR(priv, "Error sending TX power (%d)\n", ret);
 		return ret;
 	}
-<<<<<<< HEAD
-=======
-
-	if (ctx->vif && ctx->vif->type == NL80211_IFTYPE_STATION &&
-	    priv->cfg->ht_params && priv->cfg->ht_params->smps_mode)
-		ieee80211_request_smps(ctx->vif,
-				       priv->cfg->ht_params->smps_mode);
-
->>>>>>> v3.1.9
 	return 0;
 }
 

@@ -94,7 +94,6 @@ enum {
 	STAC_92HD83XXX_REF,
 	STAC_92HD83XXX_PWR_REF,
 	STAC_DELL_S14,
-	STAC_DELL_VOSTRO_3500,
 	STAC_92HD83XXX_HP,
 	STAC_HP_DV7_4000,
 	STAC_92HD83XXX_MODELS
@@ -213,11 +212,6 @@ struct sigmatel_spec {
 	unsigned int gpio_mute;
 	unsigned int gpio_led;
 	unsigned int gpio_led_polarity;
-<<<<<<< HEAD
-=======
-	unsigned int vref_mute_led_nid; /* pin NID for mute-LED vref control */
-	unsigned int vref_led;
->>>>>>> v3.1.9
 
 	/* stream */
 	unsigned int stream_delay;
@@ -1634,12 +1628,6 @@ static const unsigned int dell_s14_pin_configs[10] = {
 	0x40f000f0, 0x40f000f0,
 };
 
-static const unsigned int dell_vostro_3500_pin_configs[10] = {
-	0x02a11020, 0x0221101f, 0x400000f0, 0x90170110,
-	0x400000f1, 0x400000f2, 0x400000f3, 0x90a60160,
-	0x400000f4, 0x400000f5,
-};
-
 static const unsigned int hp_dv7_4000_pin_configs[10] = {
 	0x03a12050, 0x0321201f, 0x40f000f0, 0x90170110,
 	0x40f000f0, 0x40f000f0, 0x90170110, 0xd5a30140,
@@ -1650,11 +1638,6 @@ static const unsigned int *stac92hd83xxx_brd_tbl[STAC_92HD83XXX_MODELS] = {
 	[STAC_92HD83XXX_REF] = ref92hd83xxx_pin_configs,
 	[STAC_92HD83XXX_PWR_REF] = ref92hd83xxx_pin_configs,
 	[STAC_DELL_S14] = dell_s14_pin_configs,
-<<<<<<< HEAD
-=======
-	[STAC_DELL_VOSTRO_3500] = dell_vostro_3500_pin_configs,
-	[STAC_92HD83XXX_HP_cNB11_INTQUAD] = hp_cNB11_intquad_pin_configs,
->>>>>>> v3.1.9
 	[STAC_HP_DV7_4000] = hp_dv7_4000_pin_configs,
 };
 
@@ -1663,7 +1646,6 @@ static const char * const stac92hd83xxx_models[STAC_92HD83XXX_MODELS] = {
 	[STAC_92HD83XXX_REF] = "ref",
 	[STAC_92HD83XXX_PWR_REF] = "mic-ref",
 	[STAC_DELL_S14] = "dell-s14",
-	[STAC_DELL_VOSTRO_3500] = "dell-vostro-3500",
 	[STAC_92HD83XXX_HP] = "hp",
 	[STAC_HP_DV7_4000] = "hp-dv7-4000",
 };
@@ -1676,8 +1658,6 @@ static const struct snd_pci_quirk stac92hd83xxx_cfg_tbl[] = {
 		      "DFI LanParty", STAC_92HD83XXX_REF),
 	SND_PCI_QUIRK(PCI_VENDOR_ID_DELL, 0x02ba,
 		      "unknown Dell", STAC_DELL_S14),
-	SND_PCI_QUIRK(PCI_VENDOR_ID_DELL, 0x1028,
-		      "Dell Vostro 3500", STAC_DELL_VOSTRO_3500),
 	SND_PCI_QUIRK_MASK(PCI_VENDOR_ID_HP, 0xff00, 0x3600,
 		      "HP", STAC_92HD83XXX_HP),
 	{} /* terminator */
@@ -4828,18 +4808,7 @@ static int find_mute_led_gpio(struct hda_codec *codec, int default_polarity)
 			if (sscanf(dev->name, "HP_Mute_LED_%d_%d",
 				  &spec->gpio_led_polarity,
 				  &spec->gpio_led) == 2) {
-<<<<<<< HEAD
 				spec->gpio_led = 1 << spec->gpio_led;
-=======
-				unsigned int max_gpio;
-				max_gpio = snd_hda_param_read(codec, codec->afg,
-							      AC_PAR_GPIO_CAP);
-				max_gpio &= AC_GPIO_IO_COUNT;
-				if (spec->gpio_led < max_gpio)
-					spec->gpio_led = 1 << spec->gpio_led;
-				else
-					spec->vref_mute_led_nid = spec->gpio_led;
->>>>>>> v3.1.9
 				return 1;
 			}
 			if (sscanf(dev->name, "HP_Mute_LED_%d",
@@ -4954,44 +4923,11 @@ static int stac92xx_resume(struct hda_codec *codec)
 					       spec->autocfg.line_out_pins[0]);
 	}
 	/* sync mute LED */
-<<<<<<< HEAD
 	if (spec->gpio_led)
 		hda_call_check_power_status(codec, 0x01);
 	return 0;
 }
 
-=======
-	if (spec->vref_mute_led_nid)
-		stac_vrefout_set(codec, spec->vref_mute_led_nid,
-				 spec->vref_led);
-	else if (spec->gpio_led)
-		stac_gpio_set(codec, spec->gpio_mask,
-			      spec->gpio_dir, spec->gpio_data);
-	return 0;
-}
-
-static void stac92xx_set_power_state(struct hda_codec *codec, hda_nid_t fg,
-				unsigned int power_state)
-{
-	unsigned int afg_power_state = power_state;
-	struct sigmatel_spec *spec = codec->spec;
-
-	if (power_state == AC_PWRST_D3) {
-		if (spec->vref_mute_led_nid) {
-			/* with vref-out pin used for mute led control
-			 * codec AFG is prevented from D3 state
-			 */
-			afg_power_state = AC_PWRST_D1;
-		}
-		/* this delay seems necessary to avoid click noise at power-down */
-		msleep(100);
-	}
-	snd_hda_codec_read(codec, fg, 0, AC_VERB_SET_POWER_STATE,
-			afg_power_state);
-	snd_hda_codec_set_power_to_all(codec, fg, power_state, true);
-}
-
->>>>>>> v3.1.9
 /*
  * using power check for controlling mute led of HP notebooks
  * check for mute state only on Speakers (nid = 0x10)
@@ -5018,7 +4954,6 @@ static int stac92xx_hp_check_power_status(struct hda_codec *codec,
 			break;
 		}
 	}
-<<<<<<< HEAD
 	if (muted)
 		spec->gpio_data &= ~spec->gpio_led; /* orange */
 	else
@@ -5027,45 +4962,6 @@ static int stac92xx_hp_check_power_status(struct hda_codec *codec,
 	if (!spec->gpio_led_polarity) {
 		/* LED state is inverted on these systems */
 		spec->gpio_data ^= spec->gpio_led;
-=======
-	if (muted && spec->multiout.hp_nid)
-		if (!(snd_hda_codec_amp_read(codec,
-				spec->multiout.hp_nid, 0, HDA_OUTPUT, 0) &
-					HDA_AMP_MUTE)) {
-			muted = 0; /* HP is not muted */
-		}
-	num_ext_dacs = ARRAY_SIZE(spec->multiout.extra_out_nid);
-	for (i = 0; muted && i < num_ext_dacs; i++) {
-		nid = spec->multiout.extra_out_nid[i];
-		if (nid == 0)
-			break;
-		if (!(snd_hda_codec_amp_read(codec, nid, 0, HDA_OUTPUT, 0) &
-		      HDA_AMP_MUTE)) {
-			muted = 0; /* extra output is not muted */
-		}
-	}
-	/*polarity defines *not* muted state level*/
-	if (!spec->vref_mute_led_nid) {
-		if (muted)
-			spec->gpio_data &= ~spec->gpio_led; /* orange */
-		else
-			spec->gpio_data |= spec->gpio_led; /* white */
-
-		if (!spec->gpio_led_polarity) {
-			/* LED state is inverted on these systems */
-			spec->gpio_data ^= spec->gpio_led;
-		}
-		stac_gpio_set(codec, spec->gpio_mask,
-				spec->gpio_dir, spec->gpio_data);
-	} else {
-		notmtd_lvl = spec->gpio_led_polarity ?
-				AC_PINCTL_VREF_HIZ : AC_PINCTL_VREF_GRD;
-		muted_lvl = spec->gpio_led_polarity ?
-				AC_PINCTL_VREF_GRD : AC_PINCTL_VREF_HIZ;
-		spec->vref_led = muted ? muted_lvl : notmtd_lvl;
-		stac_vrefout_set(codec,	spec->vref_mute_led_nid,
-				 spec->vref_led);
->>>>>>> v3.1.9
 	}
 
 	stac_gpio_set(codec, spec->gpio_mask, spec->gpio_dir, spec->gpio_data);
@@ -5583,22 +5479,10 @@ again:
 
 #ifdef CONFIG_SND_HDA_POWER_SAVE
 	if (spec->gpio_led) {
-<<<<<<< HEAD
 		spec->gpio_mask |= spec->gpio_led;
 		spec->gpio_dir |= spec->gpio_led;
 		spec->gpio_data |= spec->gpio_led;
 		/* register check_power_status callback. */
-=======
-		if (!spec->vref_mute_led_nid) {
-			spec->gpio_mask |= spec->gpio_led;
-			spec->gpio_dir |= spec->gpio_led;
-			spec->gpio_data |= spec->gpio_led;
-		} else {
-			codec->patch_ops.set_power_state =
-					stac92xx_set_power_state;
-		}
-		codec->patch_ops.pre_resume = stac92xx_pre_resume;
->>>>>>> v3.1.9
 		codec->patch_ops.check_power_status =
 			stac92xx_hp_check_power_status;
 	}
@@ -5911,22 +5795,10 @@ again:
 
 #ifdef CONFIG_SND_HDA_POWER_SAVE
 	if (spec->gpio_led) {
-<<<<<<< HEAD
 		spec->gpio_mask |= spec->gpio_led;
 		spec->gpio_dir |= spec->gpio_led;
 		spec->gpio_data |= spec->gpio_led;
 		/* register check_power_status callback. */
-=======
-		if (!spec->vref_mute_led_nid) {
-			spec->gpio_mask |= spec->gpio_led;
-			spec->gpio_dir |= spec->gpio_led;
-			spec->gpio_data |= spec->gpio_led;
-		} else {
-			codec->patch_ops.set_power_state =
-					stac92xx_set_power_state;
-		}
-		codec->patch_ops.pre_resume = stac92xx_pre_resume;
->>>>>>> v3.1.9
 		codec->patch_ops.check_power_status =
 			stac92xx_hp_check_power_status;
 	}

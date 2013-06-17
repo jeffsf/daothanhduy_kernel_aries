@@ -181,25 +181,6 @@ struct intel_crtc {
 #define DIP_VERSION_AVI 0x2
 #define DIP_LEN_AVI     13
 
-<<<<<<< HEAD
-=======
-#define DIP_TYPE_SPD	0x83
-#define DIP_VERSION_SPD	0x1
-#define DIP_LEN_SPD	25
-#define DIP_SPD_UNKNOWN	0
-#define DIP_SPD_DSTB	0x1
-#define DIP_SPD_DVDP	0x2
-#define DIP_SPD_DVHS	0x3
-#define DIP_SPD_HDDVR	0x4
-#define DIP_SPD_DVC	0x5
-#define DIP_SPD_DSC	0x6
-#define DIP_SPD_VCD	0x7
-#define DIP_SPD_GAME	0x8
-#define DIP_SPD_PC	0x9
-#define DIP_SPD_BD	0xa
-#define DIP_SPD_SCD	0xb
-
->>>>>>> v3.1.9
 struct dip_infoframe {
 	uint8_t type;		/* HB0 */
 	uint8_t ver;		/* HB1 */

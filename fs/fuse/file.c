@@ -1600,12 +1600,8 @@ static loff_t fuse_file_llseek(struct file *file, loff_t offset, int origin)
 	struct inode *inode = file->f_path.dentry->d_inode;
 
 	mutex_lock(&inode->i_mutex);
-<<<<<<< HEAD
 	switch (origin) {
 	case SEEK_END:
-=======
-	if (origin != SEEK_CUR && origin != SEEK_SET) {
->>>>>>> v3.1.9
 		retval = fuse_update_attributes(inode, NULL, file, NULL);
 		if (retval)
 			goto exit;

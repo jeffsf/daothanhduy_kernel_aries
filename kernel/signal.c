@@ -1896,14 +1896,6 @@ static int do_signal_stop(int signr)
 		 */
 		if (!(sig->flags & SIGNAL_STOP_STOPPED))
 			sig->group_exit_code = signr;
-<<<<<<< HEAD
-=======
-
-		sig->group_stop_count = 0;
-
-		if (task_set_jobctl_pending(current, signr | gstop))
-			sig->group_stop_count++;
->>>>>>> v3.1.9
 
 		current->group_stop &= ~GROUP_STOP_SIGMASK;
 		current->group_stop |= signr | gstop;

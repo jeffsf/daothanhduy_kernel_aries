@@ -619,15 +619,10 @@ void __init initialize_hashidentrnd(void)
 	get_random_bytes(&hashidentrnd, sizeof(hashidentrnd));
 }
 
-<<<<<<< HEAD
 static u32 __ipv6_select_ident(const struct in6_addr *addr)
 {
 	u32 newid, oldid, hash = jhash2((u32 *)addr, 4, hashidentrnd);
 	u32 *pid = &ipv6_fragmentation_id[hash % FID_HASH_SZ];
-=======
-	if (rt && !(rt->dst.flags & DST_NOPEER)) {
-		struct inet_peer *peer;
->>>>>>> v3.1.9
 
 	do {
 		oldid = *pid;

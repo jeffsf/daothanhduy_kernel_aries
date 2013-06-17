@@ -1453,11 +1453,8 @@ static int ep_loop_check_proc(void *priv, void *cookie, int call_nests)
 	struct epitem *epi;
 
 	mutex_lock_nested(&ep->mtx, call_nests + 1);
-<<<<<<< HEAD
 	ep->visited = 1;
 	list_add(&ep->visited_list_link, &visited_list);
-=======
->>>>>>> v3.1.9
 	for (rbp = rb_first(&ep->rbr); rbp; rbp = rb_next(rbp)) {
 		epi = rb_entry(rbp, struct epitem, rbn);
 		if (unlikely(is_file_epoll(epi->ffd.file))) {
@@ -1658,10 +1655,6 @@ SYSCALL_DEFINE4(epoll_ctl, int, epfd, int, op, int, fd,
 			list_add(&tfile->f_tfile_llink, &tfile_check_list);
 	}
 
-<<<<<<< HEAD
-=======
-
->>>>>>> v3.1.9
 	mutex_lock_nested(&ep->mtx, 0);
 
 	/*

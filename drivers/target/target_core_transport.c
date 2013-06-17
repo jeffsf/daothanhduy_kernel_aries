@@ -778,23 +778,13 @@ check_lun:
 
 void transport_cmd_finish_abort(struct se_cmd *cmd, int remove)
 {
-<<<<<<< HEAD
 	transport_remove_cmd_from_queue(cmd, SE_DEV(cmd)->dev_queue_obj);
-=======
->>>>>>> v3.1.9
 	transport_lun_remove_cmd(cmd);
 
 	if (transport_cmd_check_stop_to_fabric(cmd))
 		return;
-<<<<<<< HEAD
 	if (remove)
 		transport_generic_remove(cmd, 0, 0);
-=======
-	if (remove) {
-		transport_remove_cmd_from_queue(cmd, &cmd->se_dev->dev_queue_obj);
-		transport_generic_remove(cmd, 0);
-	}
->>>>>>> v3.1.9
 }
 
 void transport_cmd_finish_abort_tmr(struct se_cmd *cmd)
@@ -816,7 +806,6 @@ static int transport_add_cmd_to_queue(
 	struct se_queue_req *qr;
 	unsigned long flags;
 
-<<<<<<< HEAD
 	qr = kzalloc(sizeof(struct se_queue_req), GFP_ATOMIC);
 	if (!(qr)) {
 		printk(KERN_ERR "Unable to allocate memory for"
@@ -828,8 +817,6 @@ static int transport_add_cmd_to_queue(
 	qr->cmd = (void *)cmd;
 	qr->state = t_state;
 
-=======
->>>>>>> v3.1.9
 	if (t_state) {
 		spin_lock_irqsave(&T_TASK(cmd)->t_state_lock, flags);
 		cmd->t_state = t_state;
@@ -838,26 +825,11 @@ static int transport_add_cmd_to_queue(
 	}
 
 	spin_lock_irqsave(&qobj->cmd_queue_lock, flags);
-<<<<<<< HEAD
 	list_add_tail(&qr->qr_list, &qobj->qobj_list);
 	atomic_inc(&T_TASK(cmd)->t_transport_queue_active);
-=======
-
-	/* If the cmd is already on the list, remove it before we add it */
-	if (!list_empty(&cmd->se_queue_node))
-		list_del(&cmd->se_queue_node);
-	else
-		atomic_inc(&qobj->queue_cnt);
-
-	if (cmd->se_cmd_flags & SCF_EMULATE_QUEUE_FULL) {
-		cmd->se_cmd_flags &= ~SCF_EMULATE_QUEUE_FULL;
-		list_add(&cmd->se_queue_node, &qobj->qobj_list);
-	} else
-		list_add_tail(&cmd->se_queue_node, &qobj->qobj_list);
-	atomic_set(&cmd->t_transport_queue_active, 1);
->>>>>>> v3.1.9
 	spin_unlock_irqrestore(&qobj->cmd_queue_lock, flags);
 
+	atomic_inc(&qobj->queue_cnt);
 	wake_up_interruptible(&qobj->thread_wq);
 	return 0;
 }
@@ -900,7 +872,6 @@ transport_get_qr_from_queue(struct se_queue_obj *qobj)
 		return NULL;
 	}
 
-<<<<<<< HEAD
 	list_for_each_entry(qr, &qobj->qobj_list, qr_list)
 		break;
 
@@ -909,11 +880,6 @@ transport_get_qr_from_queue(struct se_queue_obj *qobj)
 		atomic_dec(&T_TASK(cmd)->t_transport_queue_active);
 	}
 	list_del(&qr->qr_list);
-=======
-	atomic_set(&cmd->t_transport_queue_active, 0);
-
-	list_del_init(&cmd->se_queue_node);
->>>>>>> v3.1.9
 	atomic_dec(&qobj->queue_cnt);
 	spin_unlock_irqrestore(&qobj->cmd_queue_lock, flags);
 
@@ -923,11 +889,8 @@ transport_get_qr_from_queue(struct se_queue_obj *qobj)
 static void transport_remove_cmd_from_queue(struct se_cmd *cmd,
 		struct se_queue_obj *qobj)
 {
-<<<<<<< HEAD
 	struct se_cmd *q_cmd;
 	struct se_queue_req *qr = NULL, *qr_p = NULL;
-=======
->>>>>>> v3.1.9
 	unsigned long flags;
 
 	spin_lock_irqsave(&qobj->cmd_queue_lock, flags);
@@ -935,7 +898,6 @@ static void transport_remove_cmd_from_queue(struct se_cmd *cmd,
 		spin_unlock_irqrestore(&qobj->cmd_queue_lock, flags);
 		return;
 	}
-<<<<<<< HEAD
 
 	list_for_each_entry_safe(qr, qr_p, &qobj->qobj_list, qr_list) {
 		q_cmd = (struct se_cmd *)qr->cmd;
@@ -947,11 +909,6 @@ static void transport_remove_cmd_from_queue(struct se_cmd *cmd,
 		list_del(&qr->qr_list);
 		kfree(qr);
 	}
-=======
-	atomic_set(&cmd->t_transport_queue_active, 0);
-	atomic_dec(&qobj->queue_cnt);
-	list_del_init(&cmd->se_queue_node);
->>>>>>> v3.1.9
 	spin_unlock_irqrestore(&qobj->cmd_queue_lock, flags);
 
 	if (atomic_read(&T_TASK(cmd)->t_transport_queue_active)) {
@@ -1327,7 +1284,6 @@ static void transport_release_all_cmds(struct se_device *dev)
 	int bug_out = 0, t_state;
 	unsigned long flags;
 
-<<<<<<< HEAD
 	spin_lock_irqsave(&dev->dev_queue_obj->cmd_queue_lock, flags);
 	list_for_each_entry_safe(qr, qr_p, &dev->dev_queue_obj->qobj_list,
 				qr_list) {
@@ -1337,14 +1293,6 @@ static void transport_release_all_cmds(struct se_device *dev)
 		list_del(&qr->qr_list);
 		kfree(qr);
 		spin_unlock_irqrestore(&dev->dev_queue_obj->cmd_queue_lock,
-=======
-	spin_lock_irqsave(&dev->dev_queue_obj.cmd_queue_lock, flags);
-	list_for_each_entry_safe(cmd, tcmd, &dev->dev_queue_obj.qobj_list,
-				se_queue_node) {
-		t_state = cmd->t_state;
-		list_del_init(&cmd->se_queue_node);
-		spin_unlock_irqrestore(&dev->dev_queue_obj.cmd_queue_lock,
->>>>>>> v3.1.9
 				flags);
 
 		printk(KERN_ERR "Releasing ITT: 0x%08x, i_state: %u,"
@@ -1892,7 +1840,6 @@ void transport_init_se_cmd(
 	int task_attr,
 	unsigned char *sense_buffer)
 {
-<<<<<<< HEAD
 	INIT_LIST_HEAD(&cmd->se_lun_list);
 	INIT_LIST_HEAD(&cmd->se_delayed_list);
 	INIT_LIST_HEAD(&cmd->se_ordered_list);
@@ -1900,13 +1847,6 @@ void transport_init_se_cmd(
 	 * Setup t_task pointer to t_task_backstore
 	 */
 	cmd->t_task = &cmd->t_task_backstore;
-=======
-	INIT_LIST_HEAD(&cmd->se_lun_node);
-	INIT_LIST_HEAD(&cmd->se_delayed_node);
-	INIT_LIST_HEAD(&cmd->se_ordered_node);
-	INIT_LIST_HEAD(&cmd->se_qf_node);
-	INIT_LIST_HEAD(&cmd->se_queue_node);
->>>>>>> v3.1.9
 
 	INIT_LIST_HEAD(&T_TASK(cmd)->t_task_list);
 	init_completion(&T_TASK(cmd)->transport_lun_fe_stop_comp);
@@ -4238,7 +4178,6 @@ int transport_generic_map_mem_to_cmd(
 	if ((cmd->se_cmd_flags & SCF_SCSI_DATA_SG_IO_CDB) ||
 	    (cmd->se_cmd_flags & SCF_SCSI_CONTROL_SG_IO_CDB)) {
 		/*
-<<<<<<< HEAD
 		 * For CDB using TCM struct se_mem linked list scatterlist memory
 		 * processed into a TCM struct se_subsystem_dev, we do the mapping
 		 * from the passed physical memory to struct se_mem->se_page here.
@@ -4246,19 +4185,6 @@ int transport_generic_map_mem_to_cmd(
 		T_TASK(cmd)->t_mem_list = transport_init_se_mem_list();
 		if (!(T_TASK(cmd)->t_mem_list))
 			return -ENOMEM;
-=======
-		 * Reject SCSI data overflow with map_mem_to_cmd() as incoming
-		 * scatterlists already have been set to follow what the fabric
-		 * passes for the original expected data transfer length.
-		 */
-		if (cmd->se_cmd_flags & SCF_OVERFLOW_BIT) {
-			pr_warn("Rejecting SCSI DATA overflow for fabric using"
-				" SCF_PASSTHROUGH_SG_TO_MEM_NOALLOC\n");
-			cmd->se_cmd_flags |= SCF_SCSI_CDB_EXCEPTION;
-			cmd->scsi_sense_reason = TCM_INVALID_CDB_FIELD;
-			return -EINVAL;
-		}
->>>>>>> v3.1.9
 
 		ret = transport_map_sg_to_mem(cmd,
 			T_TASK(cmd)->t_mem_list, mem, &se_mem_cnt_out);
@@ -5915,15 +5841,6 @@ EXPORT_SYMBOL(transport_check_aborted_status);
 
 void transport_send_task_abort(struct se_cmd *cmd)
 {
-	unsigned long flags;
-
-	spin_lock_irqsave(&cmd->t_state_lock, flags);
-	if (cmd->se_cmd_flags & SCF_SENT_CHECK_CONDITION) {
-		spin_unlock_irqrestore(&cmd->t_state_lock, flags);
-		return;
-	}
-	spin_unlock_irqrestore(&cmd->t_state_lock, flags);
-
 	/*
 	 * If there are still expected incoming fabric WRITEs, we wait
 	 * until until they have completed before sending a TASK_ABORTED

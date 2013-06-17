@@ -638,11 +638,7 @@ int ip_options_rcv_srr(struct sk_buff *skb)
 	}
 	if (srrptr <= srrspace) {
 		opt->srr_is_hit = 1;
-<<<<<<< HEAD
 		opt->nexthop = nexthop;
-=======
-		iph->daddr = nexthop;
->>>>>>> v3.1.9
 		opt->is_changed = 1;
 	}
 	return 0;

@@ -52,13 +52,8 @@
 #define AD1836_ADCL2_MUTE 		2
 #define AD1836_ADCR2_MUTE 		3
 #define AD1836_ADC_WORD_LEN_MASK       0x30
-<<<<<<< HEAD
 #define AD1836_ADC_WORD_OFFSET         5
 #define AD1836_ADC_SERFMT_MASK	       (7 << 6)
-=======
-#define AD1836_ADC_WORD_OFFSET         4
-#define AD1836_ADC_SERFMT_MASK         (7 << 6)
->>>>>>> v3.1.9
 #define AD1836_ADC_SERFMT_PCK256       (0x4 << 6)
 #define AD1836_ADC_SERFMT_PCK128       (0x5 << 6)
 #define AD1836_ADC_AUX                 (0x6 << 6)

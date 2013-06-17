@@ -75,11 +75,8 @@ int tick_check_broadcast_device(struct clock_event_device *dev)
 		return 0;
 
 	clockevents_exchange_device(tick_broadcast_device.evtdev, dev);
-<<<<<<< HEAD
 	if (cur)
 		cur->event_handler = clockevents_handle_noop;
-=======
->>>>>>> v3.1.9
 	tick_broadcast_device.evtdev = dev;
 	if (!cpumask_empty(tick_get_broadcast_mask()))
 		tick_broadcast_start_periodic(dev);
