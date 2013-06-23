@@ -45,7 +45,11 @@
 #include <mach/gpio-p1.h>
 #include "logo_rgb24_wvga_portrait_p1.h"
 #else //CONFIG_MACH_ARIES
+#ifdef CONFIG_NEXUSIMAGE_HDPI
+#include "logo_rgb24_nexusimage_portrait.h
+#else
 #include "logo_rgb24_wvga_portrait.h"
+#endif
 #endif
 #include <mach/regs-clock.h>
 #include "s3cfb.h"

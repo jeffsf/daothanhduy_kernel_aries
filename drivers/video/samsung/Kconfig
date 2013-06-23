@@ -150,3 +150,10 @@ config FB_S3C_CMC623
 	default "0"
 	---help---
 	This enables support for Samsung CMC623 feature
+
+config NEXUSIMAGE_HDPI
+	bool "Nexus S Kernel Splash"
+	default y
+	---help---
+	This is a purely graphical option for those who wish to use a cleaner splash based on Nexus
+	
