@@ -47,6 +47,8 @@
 #else //CONFIG_MACH_ARIES
 #ifdef CONFIG_NEXUSIMAGE_HDPI
 #include "logo_rgb24_nexusimage_portrait.h"
+#elif defined(CONFIG_GOOGLEIMAGE_HDPI)
+#include "logo_rgb24_googleimage_portrait.h"
 #else
 #include "logo_rgb24_wvga_portrait.h"
 #endif

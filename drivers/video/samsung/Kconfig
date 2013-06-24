@@ -153,7 +153,13 @@ config FB_S3C_CMC623
 
 config NEXUSIMAGE_HDPI
 	bool "Nexus S Kernel Splash"
-	default y
+	default n
 	---help---
 	This is a purely graphical option for those who wish to use a cleaner splash based on Nexus
+
+config GOOGLEIMAGE_HDPI
+    bool "Google Splash Screen"
+    default n
+    ---help---
+    Simple Google Splash
 	
