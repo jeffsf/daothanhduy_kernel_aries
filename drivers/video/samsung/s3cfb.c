@@ -49,6 +49,8 @@
 #include "logo_rgb24_nexusimage_portrait.h"
 #elif defined(CONFIG_GOOGLEIMAGE_HDPI)
 #include "logo_rgb24_googleimage_portrait.h"
+#elif defined(CONFIG_TEAM_USERDEBUG)
+#include "logo_rgb24_tudb.h"
 #else
 #include "logo_rgb24_wvga_portrait.h"
 #endif

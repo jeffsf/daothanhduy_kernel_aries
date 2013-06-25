@@ -162,3 +162,9 @@ config GOOGLEIMAGE_HDPI
 	default n
 	---help---
 	This is a purely graphical option for those who wish to use a simple 'Google' splash screen
+	
+config TEAM_USERDEBUG
+	bool "Userdebug Kernel Splash"
+	default n
+	---help---
+	Only select this if you are a TeamUserDebug member
