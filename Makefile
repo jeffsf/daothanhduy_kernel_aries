@@ -345,21 +345,41 @@ KALLSYMS	= scripts/kallsyms
 PERL		= perl
 CHECK		= sparse
 
-# Use the wrapper for the compiler. This wrapper scans for new
-# warnings and causes the build to stop upon encountering them.
-#CC                = $(srctree)/scripts/gcc-wrapper.py $(REAL_CC)
-
-CHECKFLAGS := -D__linux__ -Dlinux -D__STDC__ -Dunix -D__unix__ \
-                  -Wbitwise -Wno-return-void $(CF)
-OPTIMIZATION_FLAGS = -march=armv7-a -mtune=cortex-a8 -mfpu=neon \
-                     -ffast-math -fsingle-precision-constant \
-                     -fgcse-lm -fgcse-sm -fsched-spec-load -fforce-addr
-CFLAGS_MODULE = $(OPTIMIZATION_FLAGS)
-AFLAGS_MODULE = $(OPTIMIZATION_FLAGS)
-LDFLAGS_MODULE =
-CFLAGS_KERNEL = $(OPTIMIZATION_FLAGS)
-AFLAGS_KERNEL = $(OPTIMIZATION_FLAGS)
-CFLAGS_GCOV = -fprofile-arcs -ftest-coverage
+CHECKFLAGS     := -D__linux__ -Dlinux -D__STDC__ -Dunix -D__unix__ \
+		  -Wbitwise -Wno-return-void $(CF)
+MODFLAGS	= -DMODULE \
+		  -march=armv7-a \
+		  -mfpu=neon \
+		  -mtune=cortex-a9 \
+		  -fgcse-after-reload \
+		  -fipa-cp-clone \
+		  -fpredictive-commoning \
+		  -fsched-spec-load \
+		  -funswitch-loops \
+		  -fvect-cost-model
+ifeq ($(TARGET_GCC),4.8)
+MODFLAGS	+=	-fno-aggressive-loop-optimizations \
+			-Wno-sizeof-pointer-memaccess
+endif
+CFLAGS_MODULE   = $(MODFLAGS)
+AFLAGS_MODULE   = $(MODFLAGS)
+LDFLAGS_MODULE  = 
+CFLAGS_KERNEL	= -march=armv7-a \
+		  -mfpu=neon \
+		  -mtune=cortex-a9 \
+		  -fgcse-after-reload \
+		  -fipa-cp-clone \
+		  -fpredictive-commoning \
+		  -fsched-spec-load \
+		  -funswitch-loops \
+		  -fvect-cost-model \
+		  -O2
+ifeq ($(TARGET_GCC),4.8)
+CFLAGS_KERNEL	+=	-fno-aggressive-loop-optimizations \
+			-Wno-sizeof-pointer-memaccess
+endif
+AFLAGS_KERNEL	=
+CFLAGS_GCOV	= -fprofile-arcs -ftest-coverage
 
 
 # Use LINUXINCLUDE when you must reference the include/ directory.
@@ -371,12 +391,20 @@ LINUXINCLUDE    := -I$(srctree)/arch/$(hdr-arch)/include \
 
 KBUILD_CPPFLAGS := -D__KERNEL__
 
-KBUILD_CFLAGS := -Wall -Wundef -Wstrict-prototypes -Wno-trigraphs \
-                   -fno-strict-aliasing -fno-common \
-                   -Werror-implicit-function-declaration \
-                   -Wno-format-security \
-                   -fno-delete-null-pointer-checks
+ifeq ($(TARGET_GCC),4.8)
+KBUILD_CPPFLAGS  +=  -fno-aggressive-loop-optimizations \
+      -Wno-sizeof-pointer-memaccess
+endif
 
+KBUILD_CFLAGS   := -Wall -Wundef -Wstrict-prototypes -Wno-trigraphs \
+		   -fno-strict-aliasing -fno-common \
+		   -Werror-implicit-function-declaration \
+		   -Wno-format-security \
+                   -fno-delete-null-pointer-checks
+ifeq ($(TARGET_GCC),4.8)
+KBUILD_CFLAGS  +=  -fno-aggressive-loop-optimizations \
+      -Wno-sizeof-pointer-memaccess
+endif
 KBUILD_AFLAGS_KERNEL :=
 KBUILD_CFLAGS_KERNEL :=
 KBUILD_AFLAGS   := -D__ASSEMBLY__
