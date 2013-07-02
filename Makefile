@@ -351,7 +351,13 @@ MODFLAGS	= -DMODULE \
 		  -march=armv7-a \
 		  -mfpu=neon \
 		  -mtune=cortex-a8 \
-		  -Os
+		  -Os \
+		  -fgcse-after-reload \
+		  -fipa-cp-clone \
+		  -fpredictive-commoning \
+		  -fsched-spec-load \
+		  -funswitch-loops \
+		  -fvect-cost-model
 
 ifdef CONFIG_GCC_48_FIXES
   MODFLAGS  +=  -fno-aggressive-loop-optimizations \
@@ -363,7 +369,13 @@ LDFLAGS_MODULE  =
 CFLAGS_KERNEL	= -march=armv7-a \
 		  -mfpu=neon \
 		  -mtune=cortex-a8 \
-		  -Os
+		  -Os \
+		  -fgcse-after-reload \
+		  -fipa-cp-clone \
+		  -fpredictive-commoning \
+		  -fsched-spec-load \
+		  -funswitch-loops \
+		  -fvect-cost-model
 
 ifdef CONFIG_GCC_48_FIXES
   CFLAGS_KERNEL  +=  -fno-aggressive-loop-optimizations \
