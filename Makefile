@@ -351,13 +351,10 @@ MODFLAGS	= -DMODULE \
 		  -march=armv7-a \
 		  -mfpu=neon \
 		  -mtune=cortex-a8 \
-		  -Os \
-		  -fgcse-after-reload \
-		  -fipa-cp-clone \
-		  -fpredictive-commoning \
-		  -fsched-spec-load \
-		  -funswitch-loops \
-		  -fvect-cost-model
+		  -O3 \
+		  -fno-unswitch-loops \
+		  -fno-inline-functions
+
 ifdef CONFIG_GCC_48_FIXES
   MODFLAGS  +=  -fno-aggressive-loop-optimizations \
 			-Wno-sizeof-pointer-memaccess
@@ -368,13 +365,8 @@ LDFLAGS_MODULE  =
 CFLAGS_KERNEL	= -march=armv7-a \
 		  -mfpu=neon \
 		  -mtune=cortex-a8 \
-		  -Os \
-		  -fgcse-after-reload \
-		  -fipa-cp-clone \
-		  -fpredictive-commoning \
-		  -fsched-spec-load \
-		  -funswitch-loops \
-		  -fvect-cost-model
+		  -O2
+
 ifdef CONFIG_GCC_48_FIXES
   CFLAGS_KERNEL  +=  -fno-aggressive-loop-optimizations \
 			-Wno-sizeof-pointer-memaccess
@@ -394,7 +386,7 @@ KBUILD_CPPFLAGS := -D__KERNEL__
 
 ifdef CONFIG_GCC_48_FIXES
   KBUILD_CPPFLAGS  +=  -fno-aggressive-loop-optimizations \
-        -Wno-sizeof-pointer-memaccess
+                       -Wno-sizeof-pointer-memaccess
 endif
 
 KBUILD_CFLAGS   := -Wall -Wundef -Wstrict-prototypes -Wno-trigraphs \
