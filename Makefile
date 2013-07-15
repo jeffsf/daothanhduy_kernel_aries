@@ -245,8 +245,8 @@ CONFIG_SHELL := $(shell if [ -x "$$BASH" ]; then echo $$BASH; \
 
 HOSTCC       = gcc
 HOSTCXX      = g++
-HOSTCFLAGS   = -Wall -Wmissing-prototypes -Wstrict-prototypes -O2 -fomit-frame-pointer
-HOSTCXXFLAGS = -O2
+HOSTCFLAGS   = -Wall -Wmissing-prototypes -Wstrict-prototypes -O3 -fno-unswitch-loops -fno-inline-functions -fomit-frame-pointer
+HOSTCXXFLAGS = -O3 -fno-unswitch-loops -fno-inline-functions
 
 # Decide whether to build built-in, modular, or both.
 # Normally, just do built-in.
@@ -365,7 +365,9 @@ LDFLAGS_MODULE  =
 CFLAGS_KERNEL	= -march=armv7-a \
 		  -mfpu=neon \
 		  -mtune=cortex-a8 \
-		  -O2
+		  -O3 \
+		  -fno-unswitch-loops \
+		  -fno-inline-functions
 
 ifdef CONFIG_GCC_48_FIXES
   CFLAGS_KERNEL  +=  -fno-aggressive-loop-optimizations \
@@ -590,11 +592,13 @@ all: vmlinux
 
 ifdef CONFIG_CC_OPTIMIZE_FOR_SIZE
 KBUILD_CFLAGS	+= -Os
-  ifdef CONFIG_GCC_48_OPTIMIZE
-    KBUILD_CFLAGS  += -Wno-maybe-uninitialized
+  ifdef CONFIG_OPIMIZE_SIZE_GCC_48_FIXES
+    KBUILD_CFLAGS	+=	-Wno-maybe-uninitialized \
+				-fno-aggressive-loop-optimizations \
+				-Wno-sizeof-pointer-memaccess
   endif
 else
-KBUILD_CFLAGS	+= -O2
+KBUILD_CFLAGS  += -O3 -fno-unswitch-loops -fno-inline-functions
 endif
 
 include $(srctree)/arch/$(SRCARCH)/Makefile
