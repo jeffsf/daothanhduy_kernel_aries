@@ -38,11 +38,6 @@ dir /stage1 755 0 0
 dir /system 755 0 0
 dir /cache 755 0 0
 dir /sdcard 755 0 0
-dir /lvm 755 0 0
-dir /lvm/etc 755 0 0
-dir /lvm/sbin 755 0 0
-file /lvm/etc/lvm.conf source/usr/galaxys4gmtd_initramfs_files/lvm.conf 755 0 0
-file /lvm/sbin/lvm source/usr/galaxys4gmtd_initramfs_files/lvm 755 0 0
 file /stage1/busybox ../../utilities/busybox 755 0 0
 file /stage1/init source/usr/galaxys4gmtd_initramfs_files/init 755 0 0
 file /stage1/erase_image ../../utilities/erase_image 755 0 0
