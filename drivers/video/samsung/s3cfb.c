@@ -51,6 +51,8 @@
 #include "logo_rgb24_googleimage_portrait.h"
 #elif defined(CONFIG_TEAM_USERDEBUG)
 #include "logo_rgb24_tudb.h"
+#elif defined(CONFIG_PAC)
+#include "logo_rgb24_pac_portrait.h"
 #else
 #include "logo_rgb24_wvga_portrait.h"
 #endif
