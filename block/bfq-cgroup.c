@@ -342,9 +342,8 @@ static void bfq_cic_change_cgroup(struct cfq_io_context *cic,
 	unsigned long uninitialized_var(flags);
 
 	bfqd = bfq_get_bfqd_locked(&cic->key, &flags);
-	if (bfqd != NULL &&
-	    !strncmp(bfqd->queue->elevator->type->elevator_name,
-		     "bfq", ELV_NAME_MAX)) {
+	if (bfqd != NULL && !strncmp(bfqd->queue->elevator->type->elevator_name,
++         "bfq", ELV_NAME_MAX)) {
 		__bfq_cic_change_cgroup(bfqd, cic, cgroup);
 		bfq_put_bfqd_unlock(bfqd, &flags);
 	}
