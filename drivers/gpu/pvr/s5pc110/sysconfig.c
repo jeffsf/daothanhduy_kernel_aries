@@ -147,7 +147,7 @@ static PVRSRV_ERROR DisableSGXClocks(void)
 {
 	clk_disable(g3d_clock);
 	regulator_disable(g3d_pd_regulator);
-#ifdef CONFIG_DVFS_LIMI
+#ifdef CONFIG_DVFS_LIMIT
 	s5pv210_unlock_dvfs_high_level(DVFS_LOCK_TOKEN_10);
 #else
 	cpufreq_update_policy(current_thread_info()->cpu);
