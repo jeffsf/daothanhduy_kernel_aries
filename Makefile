@@ -394,7 +394,7 @@ KBUILD_CFLAGS   := -Wall -Wundef -Wstrict-prototypes -Wno-trigraphs \
 		   -Werror-implicit-function-declaration \
 		   -Wno-format-security \
 		   -fno-delete-null-pointer-checks \
-		   -mno-unaligned-access
+		   -mno-unaligned-access \
 		   -mtune=cortex-a8 -mfpu=neon -ftree-vectorize -mfloat-abi=softfp
 ifdef CONFIG_GCC_48_FIXES
   KBUILD_CFLAGS  +=  -fno-aggressive-loop-optimizations \
