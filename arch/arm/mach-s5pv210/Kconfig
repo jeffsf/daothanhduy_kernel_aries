@@ -510,5 +510,3 @@ config S5PV210_CPUFREQ_MAX
 	default 1000000
 
 endif # S5PV210_CPUFREQ_SET_MINMAX
-
-endif

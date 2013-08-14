@@ -593,7 +593,7 @@ PVRSRV_ERROR SysDeinitialise (SYS_DATA *psSysData)
 #else
 	/* TODO: regulator and clk put. */
 #ifdef CONFIG_DVFS_LIMIT
-	s5pv210_unlock_dvfs_high_level(DVFS_LOCK_TOKEN_PVR);
+	s5pv210_unlock_dvfs_high_level(DVFS_LOCK_TOKEN_10);
 #else
 	cpufreq_unregister_notifier(&cpufreq_limit_notifier,
 				    CPUFREQ_POLICY_NOTIFIER);
