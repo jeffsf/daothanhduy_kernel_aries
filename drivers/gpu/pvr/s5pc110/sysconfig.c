@@ -560,6 +560,7 @@ PVRSRV_ERROR SysFinalise(IMG_VOID)
 				  CPUFREQ_POLICY_NOTIFIER);
 #endif
 #endif 
+#endif
 
 	return PVRSRV_OK;
 }
