@@ -170,7 +170,13 @@ config TEAM_USERDEBUG
 	Only select this if you are a TeamUserDebug member
 
 config PAC
-	bool "Userdebug Kernel Splash"
+	bool "PACman Kernel Splash"
 	default n
 	---help---
 	Only select this if you are building Pacman
+
+config FAHQ
+	bool "TFQ Kernel Splash"
+	default n
+	---help---
+	Only select this if you are a FahQer
