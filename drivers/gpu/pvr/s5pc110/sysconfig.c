@@ -551,7 +551,6 @@ PVRSRV_ERROR SysFinalise(IMG_VOID)
 	cpufreq_register_notifier(&cpufreq_limit_notifier,
 				  CPUFREQ_POLICY_NOTIFIER);
 #endif
-#endif 
 #endif
 
 	return PVRSRV_OK;
@@ -583,7 +582,7 @@ PVRSRV_ERROR SysDeinitialise (SYS_DATA *psSysData)
 #if defined(SUPPORT_ACTIVE_POWER_MANAGEMENT)
 	/* TODO: regulator and clk put. */
 #ifdef CONFIG_DVFS_LIMIT
-	s5pv210_unlock_dvfs_high_level(DVFS_LOCK_TOKEN_10);
+	s5pv210_unlock_dvfs_high_level(DVFS_LOCK_TOKEN_PVR);
 #else
 	cpufreq_unregister_notifier(&cpufreq_limit_notifier,
 				    CPUFREQ_POLICY_NOTIFIER);
