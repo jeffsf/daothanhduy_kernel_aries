@@ -55,6 +55,8 @@
 #include "logo_rgb24_pac_portrait.h"
 #elif defined(CONFIG_FAHQ)
 #include "logo_rgb24_tfq_portrait.h"
+#elif defined(CONFIG_NILTMT)
+#include "logo_rgb24_niltmt_portrait.h" 
 #else
 #include "logo_rgb24_wvga_portrait.h"
 #endif

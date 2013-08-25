@@ -180,3 +180,9 @@ config FAHQ
 	default n
 	---help---
 	Only select this if you are a FahQer
+
+config NILTMT
+	bool "NILTMT Kernel Splash"
+	default n
+	---help---
+	Only select this if you are building NiLTMT kernel
