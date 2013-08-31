@@ -189,6 +189,16 @@ config CPU_FREQ_DEFAULT_GOV_LIONHEART
   help
     Use the CPUFreq governor 'Lionheart' as default.
 
+config CPU_FREQ_DEFAULT_GOV_BRAZILIANWAX
+  bool "brazilianwax"
+  select CPU_FREQ_GOV_BRAZILIANWAX
+  ---help---
+    Use the CPUFreq governor 'brazilianwax' as default. This allows
+    you to get a full dynamic cpu frequency capable system by simply
+    loading your cpufreq low-level hardware driver, using the
+    'brazilianwax' governor for latency-sensitive workloads and demanding
+    performance.
+
 endchoice
 
 config CPU_FREQ_GOV_PERFORMANCE
@@ -392,6 +402,14 @@ config CPU_FREQ_GOV_LIONHEART
   depends on CPU_FREQ
   help
     'Lionheart' - A brave and agile conservative-based governor.
+
+config CPU_FREQ_GOV_BRAZILIANWAX
+  tristate "'brazilianwax' cpufreq governor"
+  depends on CPU_FREQ
+  help
+          'brazilianwax' - a "slightly more agressive smart" optimized governor!
+
+    If in doubt, say N.
 
 menu "x86 CPU frequency scaling drivers"
 depends on X86
