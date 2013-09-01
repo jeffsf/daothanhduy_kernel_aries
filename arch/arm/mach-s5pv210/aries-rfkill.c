@@ -60,16 +60,6 @@ bool bt_is_running(void)
 EXPORT_SYMBOL(bt_is_running);
 #endif
 
-#ifdef CONFIG_CPU_DIDLE
-static bool bt_running = false;
-
-bool bt_is_running(void)
-{
-	return bt_running;
-}
-EXPORT_SYMBOL(bt_is_running);
-#endif
-
 static int bluetooth_set_power(void *data, enum rfkill_user_states state)
 {
 	int ret = 0;
