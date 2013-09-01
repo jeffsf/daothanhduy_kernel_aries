@@ -600,6 +600,7 @@ PVRSRV_ERROR SysDeinitialise (SYS_DATA *psSysData)
 	cpufreq_update_policy(current_thread_info()->cpu);
 #endif
 #endif
+#endif
 
 #if defined(SYS_USING_INTERRUPTS)
 	if (psSysSpecData->ui32SysSpecificData & SYS_SPECIFIC_DATA_ENABLE_LISR)

@@ -210,8 +210,6 @@ config CPU_FREQ_GOV_PERFORMANCE
 	  To compile this driver as a module, choose M here: the
 	  module will be called cpufreq_performance.
 
-	  If in doubt, say Y.
-
 config CPU_FREQ_GOV_POWERSAVE
 	tristate "'powersave' governor"
 	help
@@ -220,8 +218,6 @@ config CPU_FREQ_GOV_POWERSAVE
 
 	  To compile this driver as a module, choose M here: the
 	  module will be called cpufreq_powersave.
-
-	  If in doubt, say Y.
 
 config CPU_FREQ_GOV_USERSPACE
 	tristate "'userspace' governor for userspace frequency scaling"
@@ -235,8 +231,6 @@ config CPU_FREQ_GOV_USERSPACE
 	  module will be called cpufreq_userspace.
 
 	  For details, take a look at <file:Documentation/cpu-freq/>.
-
-	  If in doubt, say Y.
 
 
 config CPU_FREQ_GOV_ADAPTIVE
@@ -258,8 +252,6 @@ config CPU_FREQ_GOV_ADAPTIVE
 
 	  For details, take a look at linux/Documentation/cpu-freq.
 
-	  If in doubt, say N.
-
 config CPU_FREQ_GOV_ONDEMAND
 	tristate "'ondemand' cpufreq policy governor"
 	select CPU_FREQ_TABLE
@@ -276,15 +268,11 @@ config CPU_FREQ_GOV_ONDEMAND
 
 	  For details, take a look at linux/Documentation/cpu-freq.
 
-	  If in doubt, say N.
-
 config CPU_FREQ_GOV_HYPER
 	tristate "'hyper' cpufreq governor"
 	depends on CPU_FREQ
 	---help---
 	  'hyper' - A tweaked "ondemand" based smart and smooth optimized governor!
-	
-	   If in doubt, say N.
 
 config CPU_FREQ_GOV_INTERACTIVE
 	tristate "'interactive' cpufreq policy governor"
@@ -300,8 +288,6 @@ config CPU_FREQ_GOV_INTERACTIVE
 	  module will be called cpufreq_interactive.
 
 	  For details, take a look at linux/Documentation/cpu-freq.
-
-	  If in doubt, say N.
 
 config CPU_FREQ_GOV_CONSERVATIVE
 	tristate "'conservative' cpufreq governor"
@@ -324,8 +310,6 @@ config CPU_FREQ_GOV_CONSERVATIVE
 
 	  For details, take a look at linux/Documentation/cpu-freq.
 
-	  If in doubt, say N.
-
 config CPU_FREQ_GOV_ONDEMANDX
   tristate "'ondemandx' cpufreq policy governor"
   select CPU_FREQ_TABLE
@@ -341,15 +325,12 @@ config CPU_FREQ_GOV_ONDEMANDX
     module will be called cpufreq_ondemand.
 
     For details, take a look at linux/Documentation/cpu-freq.
- 	
-    If in doubt, say N.
 
 config CPU_FREQ_GOV_SMARTASS2
         tristate "'smartassV2' cpufreq governor"
         depends on CPU_FREQ
         help
             'smartassV2' - a "smart" interactoive governor
-            If in doubt, say N.
 
 config CPU_FREQ_GOV_WHEATLEY
 	tristate "'wheatley' cpufreq governor"
@@ -361,7 +342,6 @@ config CPU_FREQ_GOV_LULZACTIVE
 	depends on CPU_FREQ
 	help
 		'lulzactive' - an interactive governor by Tegrak
-		If in doubt, say N.
 
 config CPU_FREQ_GOV_LAGFREE
         tristate "'lagfree' cpufreq governor"
@@ -378,8 +358,6 @@ config CPU_FREQ_GOV_LAGFREE
 
           For details, take a look at linux/Documentation/cpu-freq.
 
-          If in doubt, say N.
-
 config CPU_FREQ_GOV_LAZY
 	tristate "'lazy' cpufreq governor"
 	depends on CPU_FREQ
@@ -391,25 +369,21 @@ config CPU_FREQ_GOV_INTELLIDEMAND
 	  'intellidemand' - an intelligent ondemand governor
 
 config CPU_FREQ_GOV_INTERACTIVEX
-  tristate "'interactiveX' cpufreq policy governor"
-  help
-    'interactiveX' - Modified version of interactive with sleep+wake code.
-
-     If in doubt, say N.
+  	tristate "'interactiveX' cpufreq policy governor"
+  	help
+    		'interactiveX' - Modified version of interactive with sleep+wake code.
 
 config CPU_FREQ_GOV_LIONHEART
-  tristate "'lionheart' cpufreq governor"
-  depends on CPU_FREQ
-  help
-    'Lionheart' - A brave and agile conservative-based governor.
+  	tristate "'lionheart' cpufreq governor"
+  	depends on CPU_FREQ
+  	help
+    		'Lionheart' - A brave and agile conservative-based governor.
 
 config CPU_FREQ_GOV_BRAZILIANWAX
-  tristate "'brazilianwax' cpufreq governor"
-  depends on CPU_FREQ
-  help
+  	tristate "'brazilianwax' cpufreq governor"
+  	depends on CPU_FREQ
+  	help
           'brazilianwax' - a "slightly more agressive smart" optimized governor!
-
-    If in doubt, say N.
 
 menu "x86 CPU frequency scaling drivers"
 depends on X86
