@@ -4,6 +4,8 @@
 #define _LINUX_DEEPIDLE_H
 
 bool deepidle_is_enabled(void);
-void report_idle_time(int idle_state, int idle_time);
+bool dstats_is_enabled(void);
+bool ddebug_is_enabled(void);
+void report_idle_time(int idle_state, int idle_time, unsigned int dflags);
 
 #endif
