@@ -1021,7 +1021,6 @@ static int s3cfb_sysfs_store_win_power(struct device *dev,
 
 static DEVICE_ATTR(win_power, S_IRUGO | S_IWUSR,
 		   s3cfb_sysfs_show_win_power, s3cfb_sysfs_store_win_power);
-
 #ifdef DISPLAY_BOOT_PROGRESS
 static void s3cfb_update_framebuffer(struct fb_info *fb,
 									int x, int y, void *buffer,
