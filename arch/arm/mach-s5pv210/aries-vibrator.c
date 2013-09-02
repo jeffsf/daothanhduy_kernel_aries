@@ -22,7 +22,6 @@
 #include <linux/mutex.h>
 #include <linux/clk.h>
 #include <linux/workqueue.h>
-#include <linux/moduleparam.h>
 
 #include <asm/mach-types.h>
 
@@ -45,18 +44,10 @@
 
 #define MAX_TIMEOUT		10000 /* 10s */
 
-/*
- * Adjustable vibration intensity:
- * 
- * PWM_DUTY_MAX = stock intensity (80280 / 2)
- * PWM_DUTY_MIN = not noticable intensity (20000)
- * 
- * pwm_duty = used intensity, adjustable via sysfs, e.g.:
- * echo 25000 > /sys/class/timed_output/vibrator/duty
- */
-#define PWM_DUTY_MAX  (87280 / 2)
-#define PWM_DUTY_MIN  (20000)
-static unsigned int pwm_duty = (80280 / 2);
+#define PWM_DUTY_MIN		22340
+static unsigned int multiplier = (PWM_DUTY_MAX - PWM_DUTY_MIN) / 100;
+static unsigned int pwm_duty = 100;
+static unsigned int pwm_duty_value = PWM_DUTY_MAX;
 
 static struct vibrator {
 	struct wake_lock wklock;
@@ -106,9 +97,9 @@ static void aries_vibrator_enable(struct timed_output_dev *dev, int value)
 	if (value) {
 #ifdef CONFIG_CPU_DIDLE
 		vibrator_running = true;
-#endif
+#endif	
 		wake_lock(&vibdata.wklock);
-		pwm_config(vibdata.pwm_dev, pwm_duty, PWM_PERIOD);
+		pwm_config(vibdata.pwm_dev, pwm_duty_value, PWM_PERIOD);
 		pwm_enable(vibdata.pwm_dev);
 		gpio_direction_output(GPIO_VIBTONE_EN1, GPIO_LEVEL_HIGH);
 
@@ -126,26 +117,37 @@ static void aries_vibrator_enable(struct timed_output_dev *dev, int value)
 	mutex_unlock(&vibdata.lock);
 }
 
-static void aries_vibrator_set_duty(struct timed_output_dev *dev, int value)
+static ssize_t aries_vibrator_set_duty(struct device *dev,
+					struct device_attribute *attr,
+					const char *buf, size_t size)
 {
-	if (value){
-		if(value >= PWM_DUTY_MIN && value <= PWM_DUTY_MAX){
-			pwm_duty = value;
-		}
-	}
+	sscanf(buf, "%d\n", &pwm_duty);
+	if (pwm_duty >= 0 && pwm_duty <= 100) pwm_duty_value = (pwm_duty * multiplier) + PWM_DUTY_MIN;
+	return size;
 }
-
-static int aries_vibrator_show_duty(struct timed_output_dev *dev)
+static ssize_t aries_vibrator_show_duty(struct device *dev,
+					struct device_attribute *attr,
+					const char *buf)
 {
-	return(pwm_duty);
+	return sprintf(buf, "%d", pwm_duty);
 }
+static DEVICE_ATTR(pwm_duty, S_IRUGO | S_IWUGO, aries_vibrator_show_duty, aries_vibrator_set_duty);
+static struct attribute *pwm_duty_attributes[] = {
+	&dev_attr_pwm_duty,
+	NULL
+};
+static struct attribute_group pwm_duty_group = {
+	.attrs = pwm_duty_attributes,
+};
+static struct miscdevice pwm_duty_device = {
+	.minor = MISC_DYNAMIC_MINOR,
+	.name = "pwm_duty",
+};
 
 static struct timed_output_dev to_dev = {
 	.name		= "vibrator",
 	.get_time	= aries_vibrator_get_time,
 	.enable		= aries_vibrator_enable,
-	.set_duty   = aries_vibrator_set_duty,
-	.show_duty  = aries_vibrator_show_duty,
 };
 
 static enum hrtimer_restart aries_vibrator_timer_func(struct hrtimer *timer)
