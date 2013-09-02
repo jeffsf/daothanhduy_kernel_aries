@@ -2996,7 +2996,7 @@ struct sec_jack_platform_data sec_jack_pdata = {
 	.buttons_zones = sec_jack_buttons_zones,
 	.num_buttons_zones = ARRAY_SIZE(sec_jack_buttons_zones),
 	.det_gpio = GPIO_DET_35,
-#if defined(CONFIG_SAMSUNG_CAPTIVATE) || defined(CONFIG_SAMSUNG_GALAXYS4G)
+#if defined(CONFIG_SAMSUNG_CAPTIVATE)
 	.send_end_gpio = GPIO_EAR_SEND_END35,
 #else
 	.send_end_gpio = GPIO_EAR_SEND_END,
@@ -3784,7 +3784,7 @@ static struct gpio_init_data aries_init_gpios[] = {
 		.drv	= S3C_GPIO_DRVSTR_1X,
 #endif
 	}, { /* GPIO_EAR_SEND_END */
-#if defined(CONFIG_SAMSUNG_CAPTIVATE) || defined (CONFIG_SAMSUNG_VIBRANT)
+#if defined(CONFIG_SAMSUNG_CAPTIVATE) || defined (CONFIG_SAMSUNG_VIBRANT) || defined(CONFIG_SAMSUNG_GALAXYS4G)
 		.num	= S5PV210_GPH3(6), // GPIO_EAR_SEND_END
 		.cfg	= S3C_GPIO_INPUT,
 		.val	= S3C_GPIO_SETPIN_NONE,
