@@ -638,6 +638,7 @@ void add_disk(struct gendisk *disk)
 	 *              64G             2048k
 	 *             256G             4096k
 	 */
+
 	if (get_capacity(disk)) {
 		unsigned long size = get_capacity(disk) >> 9;
 		size = 1UL << (ilog2(size) / 2);
