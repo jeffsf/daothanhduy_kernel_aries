@@ -69,10 +69,9 @@ extern "C" {
 #define BUF_CACHE_SIZE          256
 #define BUF_CACHE_HASH_SIZE     64
 
-#ifndef CONFIG_EXFAT_DEFAULT_CODEPAGE
-#define CONFIG_EXFAT_DEFAULT_CODEPAGE	437
-#define CONFIG_EXFAT_DEFAULT_IOCHARSET	"utf8"
-#endif
+	/* default mount options                            */
+#define DEFAULT_CODEPAGE        437
+#define DEFAULT_IOCHARSET       "utf8"
 
 #ifdef __cplusplus
 }
