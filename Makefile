@@ -1,6 +1,6 @@
 VERSION = 3
 PATCHLEVEL = 0
-SUBLEVEL = 99
+SUBLEVEL = 101
 EXTRAVERSION =
 NAME = Sneaky Weasel
 
@@ -243,10 +243,10 @@ CONFIG_SHELL := $(shell if [ -x "$$BASH" ]; then echo $$BASH; \
 	  else if [ -x /bin/bash ]; then echo /bin/bash; \
 	  else echo sh; fi ; fi)
 
-HOSTCC       = gcc
-HOSTCXX      = g++
-HOSTCFLAGS   = -Wall -Wmissing-prototypes -Wstrict-prototypes -O2 -fomit-frame-pointer
-HOSTCXXFLAGS = -O2
+HOSTCC       = ccache gcc
+HOSTCXX      = ccache g++
+HOSTCFLAGS   = -Wall -Wmissing-prototypes -Wstrict-prototypes -O3 -fno-tree-vectorize -fomit-frame-pointer
+HOSTCXXFLAGS = -O3 -fno-tree-vectorize 
 
 # Decide whether to build built-in, modular, or both.
 # Normally, just do built-in.
@@ -345,34 +345,21 @@ KALLSYMS	= scripts/kallsyms
 PERL		= perl
 CHECK		= sparse
 
-CHECKFLAGS     := -D__linux__ -Dlinux -D__STDC__ -Dunix -D__unix__ \
-		  -Wbitwise -Wno-return-void $(CF)
-MODFLAGS	= -DMODULE \
-		  -march=armv7-a \
-		  -mfpu=neon \
-		  -mtune=cortex-a8 \
-		  -O3 \
-		  -fno-unswitch-loops \
-		  -fno-inline-functions
+# Use the wrapper for the compiler. This wrapper scans for new
+# warnings and causes the build to stop upon encountering them.
+#CC                = $(srctree)/scripts/gcc-wrapper.py $(REAL_CC)
 
-ifdef CONFIG_GCC_48_FIXES
-  MODFLAGS  +=  -fno-aggressive-loop-optimizations \
-			-Wno-sizeof-pointer-memaccess
-endif
-CFLAGS_MODULE   = $(MODFLAGS)
-AFLAGS_MODULE   = $(MODFLAGS)
-LDFLAGS_MODULE  = 
-CFLAGS_KERNEL	= -march=armv7-a \
-		  -mfpu=neon \
-		  -mtune=cortex-a8 \
-		  -O2
-
-ifdef CONFIG_GCC_48_FIXES
-  CFLAGS_KERNEL  +=  -fno-aggressive-loop-optimizations \
-			-Wno-sizeof-pointer-memaccess
-endif
-AFLAGS_KERNEL	=
-CFLAGS_GCOV	= -fprofile-arcs -ftest-coverage
+CHECKFLAGS := -D__linux__ -Dlinux -D__STDC__ -Dunix -D__unix__ \
+                  -Wbitwise -Wno-return-void $(CF)
+OPTIMIZATION_FLAGS = -march=armv7-a -mtune=cortex-a8 -mfpu=neon \
+                     -ffast-math -fsingle-precision-constant \
+                     -fgcse-lm -fgcse-sm -fsched-spec-load -fforce-addr
+CFLAGS_MODULE = $(OPTIMIZATION_FLAGS)
+AFLAGS_MODULE = $(OPTIMIZATION_FLAGS)
+LDFLAGS_MODULE =
+CFLAGS_KERNEL = $(OPTIMIZATION_FLAGS)
+AFLAGS_KERNEL = $(OPTIMIZATION_FLAGS)
+CFLAGS_GCOV = -fprofile-arcs -ftest-coverage
 
 
 # Use LINUXINCLUDE when you must reference the include/ directory.
@@ -384,22 +371,12 @@ LINUXINCLUDE    := -I$(srctree)/arch/$(hdr-arch)/include \
 
 KBUILD_CPPFLAGS := -D__KERNEL__
 
-ifdef CONFIG_GCC_48_FIXES
-  KBUILD_CPPFLAGS  +=  -fno-aggressive-loop-optimizations \
-                       -Wno-sizeof-pointer-memaccess
-endif
+KBUILD_CFLAGS := -Wall -Wundef -Wstrict-prototypes -Wno-trigraphs \
+                   -fno-strict-aliasing -fno-common \
+                   -Werror-implicit-function-declaration \
+                   -Wno-format-security \
+                   -fno-delete-null-pointer-checks
 
-KBUILD_CFLAGS   := -Wall -Wundef -Wstrict-prototypes -Wno-trigraphs \
-		   -fno-strict-aliasing -fno-common \
-		   -Werror-implicit-function-declaration \
-		   -Wno-format-security \
-		   -fno-delete-null-pointer-checks \
-		   -mno-unaligned-access \
-		   -mtune=cortex-a8 -mfpu=neon -ftree-vectorize -mfloat-abi=softfp
-ifdef CONFIG_GCC_48_FIXES
-  KBUILD_CFLAGS  +=  -fno-aggressive-loop-optimizations \
-      -Wno-sizeof-pointer-memaccess
-endif
 KBUILD_AFLAGS_KERNEL :=
 KBUILD_CFLAGS_KERNEL :=
 KBUILD_AFLAGS   := -D__ASSEMBLY__
@@ -591,12 +568,16 @@ endif # $(dot-config)
 all: vmlinux
 
 ifdef CONFIG_CC_OPTIMIZE_FOR_SIZE
-KBUILD_CFLAGS	+= -Os
-  ifdef CONFIG_GCC_48_OPTIMIZE
-    KBUILD_CFLAGS  += -Wno-maybe-uninitialized
-  endif
-else
-KBUILD_CFLAGS	+= -O2
+KBUILD_CFLAGS += -Os
+endif
+ifdef CONFIG_CC_OPTIMIZE_DEFAULT
+KBUILD_CFLAGS += -O2
+endif
+ifdef CONFIG_CC_OPTIMIZE_MORE
+KBUILD_CFLAGS += -O3 -fmodulo-sched -fmodulo-sched-allow-regmoves -fno-tree-vectorize
+endif
+ifdef CONFIG_CC_OPTIMIZE_FAST
+KBUILD_CFLAGS += -Ofast
 endif
 
 include $(srctree)/arch/$(SRCARCH)/Makefile
