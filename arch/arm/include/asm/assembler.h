@@ -23,8 +23,6 @@
 #include <asm/ptrace.h>
 #include <asm/domain.h>
 
-#define IOMEM(x)	(x)
-
 /*
  * Endian independent macros for shifting bytes within registers.
  */
@@ -135,11 +133,7 @@
  * assumes FIQs are enabled, and that the processor is in SVC mode.
  */
 	.macro	save_and_disable_irqs, oldcpsr
-#ifdef CONFIG_CPU_V7M
-	mrs	\oldcpsr, primask
-#else
 	mrs	\oldcpsr, cpsr
-#endif
 	disable_irq
 	.endm
 
@@ -153,11 +147,7 @@
  * guarantee that this will preserve the flags.
  */
 	.macro	restore_irqs_notrace, oldcpsr
-#ifdef CONFIG_CPU_V7M
-	msr	primask, \oldcpsr
-#else
 	msr	cpsr_c, \oldcpsr
-#endif
 	.endm
 
 	.macro restore_irqs, oldcpsr
@@ -208,9 +198,9 @@
 #ifdef CONFIG_SMP
 #if __LINUX_ARM_ARCH__ >= 7
 	.ifeqs "\mode","arm"
-	ALT_SMP(dmb	ish)
+	ALT_SMP(dmb)
 	.else
-	ALT_SMP(W(dmb)	ish)
+	ALT_SMP(W(dmb))
 	.endif
 #elif __LINUX_ARM_ARCH__ == 6
 	ALT_SMP(mcr	p15, 0, r0, c7, c10, 5)	@ dmb
@@ -225,14 +215,7 @@
 #endif
 	.endm
 
-#if defined(CONFIG_CPU_V7M)
-	/*
-	 * setmode is used to assert to be in svc mode during boot. For v7-M
-	 * this is done in __v7m_setup, so setmode can be empty here.
-	 */
-	.macro	setmode, mode, reg
-	.endm
-#elif defined(CONFIG_THUMB2_KERNEL)
+#ifdef CONFIG_THUMB2_KERNEL
 	.macro	setmode, mode, reg
 	mov	\reg, #\mode
 	msr	cpsr_c, \reg
@@ -315,13 +298,4 @@
 	.macro	ldrusr, reg, ptr, inc, cond=al, rept=1, abort=9001f
 	usracc	ldr, \reg, \ptr, \inc, \cond, \rept, \abort
 	.endm
-
-/* Utility macro for declaring string literals */
-	.macro	string name:req, string
-	.type \name , #object
-\name:
-	.asciz "\string"
-	.size \name , . - \name
-	.endm
-
 #endif /* __ASM_ASSEMBLER_H__ */
