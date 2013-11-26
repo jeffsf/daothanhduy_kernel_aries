@@ -460,6 +460,27 @@ static void mxt224_early_suspend(struct early_suspend *h)
 	disable_irq(data->client->irq);
 	mxt224_internal_suspend(data);
 #endif
+
+#ifdef CONFIG_TOUCHSCREEN_PREVENT_SLEEP
+#if defined(CONFIG_TOUCHSCREEN_SWEEP2WAKE) || defined(CONFIG_TOUCHSCREEN_DOUBLETAP2WAKE)
+        bool prevent_sleep = false;
+#endif
+#if defined(CONFIG_TOUCHSCREEN_SWEEP2WAKE)
+        prevent_sleep = (s2w_switch > 0);
+#endif
+#if defined(CONFIG_TOUCHSCREEN_DOUBLETAP2WAKE)
+        prevent_sleep = prevent_sleep || (dt2w_switch > 0);
+#endif
+#endif
+
+#ifdef CONFIG_TOUCHSCREEN_PREVENT_SLEEP
+        if (!prevent_sleep)
+#endif
+
+#ifdef CONFIG_TOUCHSCREEN_PREVENT_SLEEP
+        if (prevent_sleep)
+        enable_irq_wake(data->client->irq);
+#endif
 }
 
 static void mxt224_late_resume(struct early_suspend *h)
@@ -469,6 +490,23 @@ static void mxt224_late_resume(struct early_suspend *h)
 								early_suspend);
 	mxt224_internal_resume(data);
 	enable_irq(data->client->irq);
+#endif
+
+#ifdef CONFIG_TOUCHSCREEN_PREVENT_SLEEP
+#if defined(CONFIG_TOUCHSCREEN_SWEEP2WAKE) || defined(CONFIG_TOUCHSCREEN_DOUBLETAP2WAKE)
+        bool prevent_sleep = false;
+#endif
+#if defined(CONFIG_TOUCHSCREEN_SWEEP2WAKE)
+        prevent_sleep = (s2w_switch > 0);
+#endif
+#if defined(CONFIG_TOUCHSCREEN_DOUBLETAP2WAKE)
+        prevent_sleep = prevent_sleep || (dt2w_switch > 0);
+#endif
+#endif
+
+#ifdef CONFIG_TOUCHSCREEN_PREVENT_SLEEP
+        if (prevent_sleep)
+                disable_irq_wake(data->client->irq);
 #endif
 }
 
@@ -661,11 +699,6 @@ err_alloc_dev:
 
 static int __devexit mxt224_remove(struct i2c_client *client)
 {
-	struct mxt224_data *data = i2c_get_clientdata(client);
-
-#ifdef CONFIG_HAS_EARLYSUSPEND
-	unregister_early_suspend(&data->early_suspend);
-#endif
 	free_irq(client->irq, data);
 	kfree(data->objects);
 	gpio_free(data->gpio_read_done);
