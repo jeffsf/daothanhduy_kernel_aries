@@ -29,6 +29,15 @@
 #include <linux/touch_wake.h>
 #endif
 
+#ifdef CONFIG_TOUCHSCREEN_PREVENT_SLEEP
+#ifdef CONFIG_TOUCHSCREEN_SWEEP2WAKE
+#include <linux/input/sweep2wake.h>
+#endif
+#ifdef CONFIG_TOUCHSCREEN_DOUBLETAP2WAKE
+#include <linux/input/doubletap2wake.h>
+#endif
+#endif
+
 #define OBJECT_TABLE_START_ADDRESS	7
 #define OBJECT_TABLE_ELEMENT_SIZE	6
 
@@ -85,8 +94,10 @@ struct mxt224_data {
 };
 
 static int read_mem(struct mxt224_data *data, u16 reg, u8 len, u8 *buf)
-{
-	int ret;
+{	
+
+#define SYNAPTICS_I2C_RETRY 10
+	int retry = 0;
 	u16 le_reg = cpu_to_le16(reg);
 	struct i2c_msg msg[2] = {
 		{
@@ -103,11 +114,15 @@ static int read_mem(struct mxt224_data *data, u16 reg, u8 len, u8 *buf)
 		},
 	};
 
-	ret = i2c_transfer(data->client->adapter, msg, 2);
-	if (ret < 0)
-		return ret;
-
-	return ret == 2 ? 0 : -EIO;
+  	for (retry = 0; retry <= SYNAPTICS_I2C_RETRY; retry++) {
+    		if (i2c_transfer(data->client->adapter, msgs, 2) == 2)
+      			break;
+    		if (retry == SYNAPTICS_I2C_RETRY) {
+      			return -EIO;
+    		} else
+      			msleep(10);
+   		}
+  	return 0;
 }
 
 static int write_mem(struct mxt224_data *data, u16 reg, u8 len, const u8 *buf)
@@ -607,7 +622,11 @@ static int __devinit mxt224_probe(struct i2c_client *client,
 		data->fingers[i].z = -1;
 
 	ret = request_threaded_irq(client->irq, NULL, mxt224_irq_thread,
-		IRQF_TRIGGER_LOW | IRQF_ONESHOT, "mxt224_ts", data);
+#ifdef CONFIG_TOUCHSCREEN_PREVENT_SLEEP
+                        IRQF_TRIGGER_FALLING | IRQF_ONESHOT | IRQF_NO_SUSPEND, "mxt224_ts", data);
+#else
+                        IRQF_TRIGGER_FALLING | IRQF_ONESHOT, "mxt224_ts", data);
+#endif
 	if (ret < 0)
 		goto err_irq;
 
