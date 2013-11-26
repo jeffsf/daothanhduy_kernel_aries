@@ -153,7 +153,22 @@ static int __devinit pmic8xxx_pwrkey_probe(struct platform_device *pdev)
 
 	platform_set_drvdata(pdev, pwrkey);
 
-	err = request_irq(key_press_irq, pwrkey_press_irq,
+	/* check power key status during boot */
+	err = pm8xxx_read_irq_stat(pdev->dev.parent, key_press_irq);
+	if (err < 0) {
+		dev_err(&pdev->dev, "reading irq status failed\n");
+		goto unreg_input_dev;
+	}
+	pwrkey->press = !!err;
+
+	if (pwrkey->press) {
+		input_report_key(pwrkey->pwr, KEY_POWER, 1);
+		input_sync(pwrkey->pwr);
+	}
+
+	power_on_display(pwr);
+
+	err = request_any_context_irq(key_press_irq, pwrkey_press_irq,
 		IRQF_TRIGGER_RISING, "pmic8xxx_pwrkey_press", pwrkey);
 	if (err < 0) {
 		dev_dbg(&pdev->dev, "Can't get %d IRQ for pwrkey: %d\n",
