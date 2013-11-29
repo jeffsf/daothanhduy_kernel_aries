@@ -38,6 +38,10 @@
 #endif
 #endif
 
+#ifdef CONFIG_PWRKEY_SUSPEND
+#include <linux/input/pmic8xxx-pwrkey.h>
+#endif
+
 #define OBJECT_TABLE_START_ADDRESS	7
 #define OBJECT_TABLE_ELEMENT_SIZE	6
 
@@ -473,6 +477,11 @@ static void mxt224_early_suspend(struct early_suspend *h)
 #endif
 #endif
 
+#ifdef CONFIG_PWRKEY_SUSPEND
+  if (pwrkey_pressed)
+    prevent_sleep = false;
+#endif
+
 #ifdef CONFIG_TOUCHSCREEN_PREVENT_SLEEP
         if (!prevent_sleep) {
 #endif
@@ -510,8 +519,14 @@ static void mxt224_late_resume(struct early_suspend *h)
 #endif
 #endif
 
+#ifdef CONFIG_PWRKEY_SUSPEND
+  if (pwrkey_pressed)
+    prevent_sleep = false;
+#endif
+
 #ifdef CONFIG_TOUCHSCREEN_PREVENT_SLEEP
         if (!prevent_sleep) {
+	pwrkey_pressed = false;
 #endif
 
 	mxt224_internal_resume(data);

@@ -30,6 +30,8 @@
 
 #ifdef CONFIG_TOUCH_WAKE
 #include <linux/touch_wake.h>
+#ifdef CONFIG_PWRKEY_SUSPEND
+#include <linux/input/pmic8xxx-pwrkey.h>
 #endif
 
 MODULE_AUTHOR("Vojtech Pavlik <vojtech@suse.cz>");
@@ -37,6 +39,13 @@ MODULE_DESCRIPTION("Input core");
 MODULE_LICENSE("GPL");
 
 #define INPUT_DEVICES	256
+
+#ifdef CONFIG_PWRKEY_SUSPEND
+bool pwrkey_pressed = false;
+bool pwrkey_suspend = false;
+static int cnt = 0;
+module_param(pwrkey_suspend, bool, 0755);
+#endif
 
 static LIST_HEAD(input_dev_list);
 static LIST_HEAD(input_handler_list);
@@ -294,6 +303,15 @@ static int input_get_disposition(struct input_dev *dev,
 					powerkey_released();
 				}
 			}
+#ifdef CONFIG_PWRKEY_SUSPEND
+		if (pwrkey_suspend) {
+			if (code == KEY_POWER && cnt == 0) {
+				pwrkey_pressed = true;
+				cnt++;
+			} else {
+				cnt = 0;
+				}
+		}
 #endif
 			if (value != 2) {
 				__change_bit(code, dev->key);
