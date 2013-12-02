@@ -533,7 +533,11 @@ static void mxt224_late_resume(struct early_suspend *h)
 
 #ifdef CONFIG_TOUCHSCREEN_PREVENT_SLEEP
   } else {
-      disable_irq_wake(ts->client->irq);
+    disable_irq_wake(ts->client->irq);
+    if (s2w_error) {
+      	s2w_error = false;
+	mxt224_internal_resume(data);
+       }
 	}
 #endif
 }
