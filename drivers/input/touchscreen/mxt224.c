@@ -702,6 +702,22 @@ static int __devinit mxt224_probe(struct i2c_client *client,
 	if (ret < 0)
 		goto err_irq;
 
+#ifdef CONFIG_TOUCHSCREEN_SWEEP2WAKE
+  ret = input_register_device(sweep2wake_pwrdev);
+  if (ret < 0) {
+    pr_err("%s: input_register_device err=%d\n", __func__, ret);
+    goto err_input_register_device_s2wpwr_failed;
+  }
+#endif
+#ifdef CONFIG_TOUCHSCREEN_DOUBLETAP2WAKE
+  ret = input_register_device(doubletap2wake_pwrdev);
+  if (ret < 0) {
+    pr_err("%s: input_register_device err=%d\n", __func__, ret);
+    goto err_input_register_device_dt2wpwr_failed;
+  }
+
++#endif
+
 #ifdef CONFIG_HAS_EARLYSUSPEND
 	data->early_suspend.level = EARLY_SUSPEND_LEVEL_BLANK_SCREEN + 1;
 	data->early_suspend.suspend = mxt224_early_suspend;
@@ -714,6 +730,15 @@ static int __devinit mxt224_probe(struct i2c_client *client,
 #endif	
   
 	return 0;	
+
+#ifdef CONFIG_TOUCHSCREEN_SWEEP2WAKE
+err_input_register_device_s2wpwr_failed:
+  input_free_device(sweep2wake_pwrdev);
+#endif
+#ifdef CONFIG_TOUCHSCREEN_DOUBLETAP2WAKE
+err_input_register_device_dt2wpwr_failed:
+  input_free_device(doubletap2wake_pwrdev);
+#endif
 
 err_irq:
 err_reset:
