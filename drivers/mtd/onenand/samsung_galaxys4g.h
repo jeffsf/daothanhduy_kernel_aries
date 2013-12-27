@@ -32,22 +32,22 @@ struct mtd_partition s3c_partition_info[] = {
 	{
 		.name		= "boot",
 		.offset		= (72*SZ_256K),
-		.size		= (30*SZ_256K), //101
+		.size		= (40*SZ_256K), //101
 	},
 	{
 		.name		= "recovery",
-		.offset		= (102*SZ_256K),
+		.offset		= (112*SZ_256K),
 		.size		= (30*SZ_256K), //131
 	},
 	{
 		.name		= "system",
-		.offset		= (132*SZ_256K),
-		.size		= (1400*SZ_256K), //1531
+		.offset		= (142*SZ_256K),
+		.size		= (1500*SZ_256K), //1531
 	},
 	{
 		.name		= "userdata",
-		.offset		= (1532*SZ_256K),
-		.size		= (2220*SZ_256K), //3751
+		.offset		= (1642*SZ_256K),
+		.size		= (2110*SZ_256K), //3751
 	},
 	{
 		.name		= "efs",
