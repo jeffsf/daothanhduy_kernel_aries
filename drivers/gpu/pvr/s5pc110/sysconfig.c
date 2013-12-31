@@ -94,18 +94,10 @@ IMG_UINT32   PVRSRV_BridgeDispatchKM( IMG_UINT32  Ioctl,
  * In arch/arm/mach-s5pv210/cpufreq.c, the bus speed is only lowered when the
  * CPU freq is below 200MHz.
  */
-#ifdef CONFIG_DVFS_LIMIT
-#define MIN_CPU_LVL L3
-#else
 #define MIN_CPU_KHZ_FREQ 200000
-#endif
 
 static struct clk *g3d_clock;
 static struct regulator *g3d_pd_regulator;
-
-#ifdef CONFIG_LIVE_OC
-extern unsigned long get_gpuminfreq(void);
-#endif
 
 #ifndef CONFIG_DVFS_LIMIT
 static int limit_adjust_cpufreq_notifier(struct notifier_block *nb,
@@ -132,7 +124,7 @@ static struct notifier_block cpufreq_limit_notifier = {
 static PVRSRV_ERROR EnableSGXClocks(void)
 {
 #ifdef CONFIG_DVFS_LIMIT
-	s5pv210_lock_dvfs_high_level(DVFS_LOCK_TOKEN_10, MIN_CPU_LVL);
+	s5pv210_lock_dvfs_high_level(DVFS_LOCK_TOKEN_PVR, L3); /* 200 MHz */
 #endif
 	regulator_enable(g3d_pd_regulator);
 	clk_enable(g3d_clock);
@@ -148,7 +140,7 @@ static PVRSRV_ERROR DisableSGXClocks(void)
 	clk_disable(g3d_clock);
 	regulator_disable(g3d_pd_regulator);
 #ifdef CONFIG_DVFS_LIMIT
-	s5pv210_unlock_dvfs_high_level(DVFS_LOCK_TOKEN_10);
+	s5pv210_unlock_dvfs_high_level(DVFS_LOCK_TOKEN_PVR);
 #else
 	cpufreq_update_policy(current_thread_info()->cpu);
 #endif
@@ -588,9 +580,6 @@ PVRSRV_ERROR SysDeinitialise (SYS_DATA *psSysData)
 	psSysSpecData = (SYS_SPECIFIC_DATA *) psSysData->pvSysSpecificData;
 
 #if defined(SUPPORT_ACTIVE_POWER_MANAGEMENT)
-#ifdef CONFIG_DVFS_LIMIT
-	s5pv210_unlock_dvfs_high_level(DVFS_LOCK_TOKEN_10);
-#else
 	/* TODO: regulator and clk put. */
 #ifdef CONFIG_DVFS_LIMIT
 	s5pv210_unlock_dvfs_high_level(DVFS_LOCK_TOKEN_PVR);
