@@ -32,11 +32,16 @@ static struct clk *dmc1_clk;
 static struct cpufreq_freqs freqs;
 static DEFINE_MUTEX(set_freq_lock);
 
+<<<<<<< HEAD
+/* APLL M,P,S values for 1.2G/1G/800Mhz */
+#define APLL_VAL_1200	((1 << 31) | (150 << 16) | (3 << 8) | 1)
+=======
 /* APLL M,P,S values for 1.4G/1.3G/1.2G/1.1G/1G/800Mhz */
 #define APLL_VAL_1400	((1 << 31) | (175 << 16) | (3 << 8) | 1)
 #define APLL_VAL_1300	((1 << 31) | (325 << 16) | (6 << 8) | 1)
 #define APLL_VAL_1200	((1 << 31) | (150 << 16) | (3 << 8) | 1)
 #define APLL_VAL_1100	((1 << 31) | (141 << 16) | (3 << 8) | 1)
+>>>>>>> d7fcf67... Standard OC -> 1400/1300/1200/1100 MHz
 #define APLL_VAL_1000	((1 << 31) | (125 << 16) | (3 << 8) | 1)
 #define APLL_VAL_800	((1 << 31) | (100 << 16) | (3 << 8) | 1)
 
@@ -77,10 +82,14 @@ enum s5pv210_dmc_port {
 };
 
 static struct cpufreq_frequency_table s5pv210_freq_table[] = {
+<<<<<<< HEAD
+	{OC0, 1200*1000},
+=======
 	{OC0, 1400*1000},
 	{OC1, 1300*1000},
 	{OC2, 1200*1000},
 	{OC3, 1100*1000},
+>>>>>>> d7fcf67... Standard OC -> 1400/1300/1200/1100 MHz
 	{L0, 1000*1000},
 	{L1, 800*1000},
 	{L2, 400*1000},
@@ -649,6 +658,8 @@ static int check_mem_type(void __iomem *dmc_reg)
 	return val >> 8;
 }
 
+<<<<<<< HEAD
+=======
 #ifdef CONFIG_LIVE_OC
 static int find_divider(int freq)
 {
@@ -806,6 +817,7 @@ unsigned long get_cpuL1freq(void)
 }
 EXPORT_SYMBOL(get_cpuL1freq);
 
+>>>>>>> 7afa3b2... Selective Live OC
 static int __init s5pv210_cpu_init(struct cpufreq_policy *policy)
 {
 	unsigned long mem_type;
