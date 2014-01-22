@@ -661,10 +661,12 @@ static int __devinit mxt224_probe(struct i2c_client *client,
 
 	ret = request_threaded_irq(client->irq, NULL, mxt224_irq_thread,
 #ifdef CONFIG_TOUCHSCREEN_PREVENT_SLEEP
-                        IRQF_TRIGGER_FALLING | IRQF_ONESHOT | IRQF_NO_SUSPEND, "mxt224_ts", data);
+                        IRQF_TRIGGER_LOW | IRQF_ONESHOT | IRQF_NO_SUSPEND,
 #else
-                        IRQF_TRIGGER_FALLING | IRQF_ONESHOT, "mxt224_ts", data);
+                        IRQF_TRIGGER_LOW | IRQF_ONESHOT,
 #endif
+	"mxt224_ts", data);
+
 	if (ret < 0)
 		goto err_irq;
 
