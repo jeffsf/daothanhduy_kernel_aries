@@ -474,13 +474,17 @@ static void mxt224_early_suspend(struct early_suspend *h)
 #endif
 
 #ifdef CONFIG_TOUCHSCREEN_PREVENT_SLEEP
-        if (!prevent_sleep)
+        if (!prevent_sleep) {
 #endif
 
+	mxt224_internal_suspend(data);
+
 #ifdef CONFIG_TOUCHSCREEN_PREVENT_SLEEP
-        if (prevent_sleep)
-        enable_irq_wake(data->client->irq);
-#endif
+        } else {
+	
+	enable_irq_wake(data->client->irq);
+    	mxt224_internal_suspend(data);
+  }
 }
 
 static void mxt224_late_resume(struct early_suspend *h)
@@ -493,6 +497,8 @@ static void mxt224_late_resume(struct early_suspend *h)
 #endif
 
 #ifdef CONFIG_TOUCHSCREEN_PREVENT_SLEEP
+	struct mxt224_data *data = container_of(h, struct mxt224_data,
+								early_suspend);
 #if defined(CONFIG_TOUCHSCREEN_SWEEP2WAKE) || defined(CONFIG_TOUCHSCREEN_DOUBLETAP2WAKE)
         bool prevent_sleep = false;
 #endif
@@ -505,8 +511,15 @@ static void mxt224_late_resume(struct early_suspend *h)
 #endif
 
 #ifdef CONFIG_TOUCHSCREEN_PREVENT_SLEEP
-        if (prevent_sleep)
-                disable_irq_wake(data->client->irq);
+        if (!prevent_sleep) {
+#endif
+
+	mxt224_internal_resume(data);
+
+#ifdef CONFIG_TOUCHSCREEN_PREVENT_SLEEP
+  } else {
+      disable_irq_wake(ts->client->irq);
+	}
 #endif
 }
 
