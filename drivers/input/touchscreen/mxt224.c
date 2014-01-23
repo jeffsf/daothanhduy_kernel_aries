@@ -119,7 +119,7 @@ static int read_mem(struct mxt224_data *data, u16 reg, u8 len, u8 *buf)
 	};
 
   	for (retry = 0; retry <= SYNAPTICS_I2C_RETRY; retry++) {
-    		if (i2c_transfer(data->client->adapter, msgs, 2) == 2)
+    		if (i2c_transfer(data->client->adapter, msg, 2) == 2)
       			break;
     		if (retry == SYNAPTICS_I2C_RETRY) {
       			return -EIO;
@@ -466,6 +466,8 @@ static void mxt224_early_suspend(struct early_suspend *h)
 #endif
 
 #ifdef CONFIG_TOUCHSCREEN_PREVENT_SLEEP
+	struct mxt224_data *data = container_of(h, struct mxt224_data,
+								early_suspend);
 #if defined(CONFIG_TOUCHSCREEN_SWEEP2WAKE) || defined(CONFIG_TOUCHSCREEN_DOUBLETAP2WAKE)
         bool prevent_sleep = false;
 #endif
@@ -533,7 +535,7 @@ static void mxt224_late_resume(struct early_suspend *h)
 
 #ifdef CONFIG_TOUCHSCREEN_PREVENT_SLEEP
   } else {
-    disable_irq_wake(ts->client->irq);
+    disable_irq_wake(data->client->irq);
     if (s2w_error) {
       	s2w_error = false;
 	mxt224_internal_resume(data);
@@ -541,6 +543,7 @@ static void mxt224_late_resume(struct early_suspend *h)
 	}
 #endif
 }
+#endif
 
 #ifdef CONFIG_TOUCH_WAKE
 static struct mxt224_data * touchwake_data;
@@ -716,7 +719,7 @@ static int __devinit mxt224_probe(struct i2c_client *client,
     goto err_input_register_device_dt2wpwr_failed;
   }
 
-+#endif
+#endif
 
 #ifdef CONFIG_HAS_EARLYSUSPEND
 	data->early_suspend.level = EARLY_SUSPEND_LEVEL_BLANK_SCREEN + 1;
@@ -758,6 +761,11 @@ err_alloc_dev:
 
 static int __devexit mxt224_remove(struct i2c_client *client)
 {
+	struct mxt224_data *data = i2c_get_clientdata(client);
+
+#ifdef CONFIG_HAS_EARLYSUSPEND
+	unregister_early_suspend(&data->early_suspend);
+#endif
 	free_irq(client->irq, data);
 	kfree(data->objects);
 	gpio_free(data->gpio_read_done);

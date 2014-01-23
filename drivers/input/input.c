@@ -30,6 +30,7 @@
 
 #ifdef CONFIG_TOUCH_WAKE
 #include <linux/touch_wake.h>
+#endif
 #ifdef CONFIG_PWRKEY_SUSPEND
 #include <linux/input/pmic8xxx-pwrkey.h>
 #endif
@@ -303,6 +304,7 @@ static int input_get_disposition(struct input_dev *dev,
 					powerkey_released();
 				}
 			}
+#endif
 #ifdef CONFIG_PWRKEY_SUSPEND
 		if (pwrkey_suspend) {
 			if (code == KEY_POWER && cnt == 0) {
