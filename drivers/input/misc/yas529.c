@@ -160,7 +160,6 @@ struct geomagnetic_data {
 	atomic_t last_data[3];
 	atomic_t last_status;
 	atomic_t enable;
-	atomic_t disabling;
 	atomic_t filter_enable;
 	atomic_t filter_len;
 	atomic_t delay;
@@ -2335,9 +2334,7 @@ geomagnetic_enable_store(struct device *dev,
 		geomagnetic_disable(data);
 		hwdep_driver.set_enable(value);
 #else
-		atomic_set(&data->disabling, 1);
 		geomagnetic_disable(data);
-		atomic_set(&data->disabling, 0);
 		hwdep_driver.set_enable(value);
 #endif
 	}
@@ -2808,9 +2805,9 @@ geomagnetic_input_work_func(struct work_struct *work)
 #else
 			// Don't lock if disabling as a lock is already held outside
 			// and locking again will cause a deadlock.
-			if (!atomic_read(&data->disabling)) geomagnetic_multi_lock();
+			eomagnetic_multi_lock();
 			data->driver_state = state;
-			if (!atomic_read(&data->disabling)) geomagnetic_multi_unlock();
+			geomagnetic_multi_unlock();
 #endif
 
 			/* report event */
@@ -2969,7 +2966,6 @@ data->threshold = YAS529_DEFAULT_THRESHOLD;
 		data->distortion[i] = YAS529_DEFAULT_DISTORTION;
 	data->shape = YAS529_DEFAULT_SHAPE;
 	atomic_set(&data->enable, 0);
-	atomic_set(&data->disabling, 0);
 	for (i = 0; i < 3; i++)
 		atomic_set(&data->last_data[i], 0);
 	atomic_set(&data->last_status, 0);
